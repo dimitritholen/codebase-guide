@@ -79,7 +79,7 @@ claude plugin install codebase-guide@codebase-guide
 ## Use
 
 ```
-/codebase-guide:codebase-guide
+/codebase-guide
 ```
 
 The short form `/codebase-guide` works too, as long as no other installed
