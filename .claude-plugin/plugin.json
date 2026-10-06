@@ -1,0 +1,22 @@
+{
+  "name": "codebase-guide",
+  "version": "0.1.0",
+  "description": "Writes a visual, single-file HTML onboarding guide for the repo in the working directory: what it does, how it is built and where everything lives. Styled by a bundled design system (Meridian by default) and exported to one offline file.",
+  "author": {
+    "name": "Dimitri Tholen",
+    "url": "https://github.com/dimitritholen"
+  },
+  "keywords": ["onboarding", "documentation", "architecture", "html", "codebase"],
+  "userConfig": {
+    "design_system": {
+      "type": "string",
+      "title": "Design system",
+      "description": "Design system the guide is built on; builtin uses the skill's own template. CODEBASE_GUIDE_DESIGN_SYSTEM overrides it for one shell.",
+      "options": [
+        "meridian",
+        "builtin"
+      ],
+      "default": "meridian"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "codebase-guide",
+  "owner": {
+    "name": "dimitritholen"
+  },
+  "metadata": {
+    "description": "Visual single-file HTML onboarding guides for any codebase."
+  },
+  "plugins": [
+    {
+      "name": "codebase-guide",
+      "source": "./",
+      "description": "Writes a visual, single-file HTML onboarding guide for any repo, styled by a bundled design system."
+    }
+  ]
+}

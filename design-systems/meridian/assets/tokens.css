@@ -1,0 +1,69 @@
+@font-face {
+  font-family: Newsreader;
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("fonts/newsreader-roman.woff2") format("woff2");
+}
+@font-face {
+  font-family: Newsreader;
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/newsreader-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Public Sans";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("fonts/public-sans.woff2") format("woff2");
+}
+
+/* Meridian 1.0. The public token contract; override here, not in documents. */
+:root {
+  color-scheme: light;
+  --paper: #ffffff;
+  --canvas: #f5f6f4;
+  --wash: #edeFEB;
+  --ink: #232824;
+  --muted: #626861;
+  --faint: #777e75;
+  --line: #d8ddd5;
+  --line-strong: #9aa296;
+  --accent: #b43c2c;
+  --accent-soft: #faeee9;
+  --positive: #47654c;
+  --positive-soft: #eef3eb;
+  --blue: #466a80;
+  --dark: #252c27;
+  --on-dark: #f5f6ef;
+  --on-dark-muted: #b8c2b8;
+  --code-keyword: #ffaf98;
+  --code-string: #c3dbaa;
+  --code-function: #e5d7b0;
+  --font-display: Newsreader, Georgia, "Times New Roman", serif;
+  --font-body: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --text-xs: .6875rem;
+  --text-sm: .8125rem;
+  --text-caption: .875rem;
+  --text-body: 1rem;
+  --text-lead: 1.125rem;
+  --text-h3: 1.375rem;
+  --text-h2: clamp(1.875rem, 1.4rem + 1.2vw, 2.75rem);
+  --text-title: clamp(3.125rem, 1.6rem + 4.5vw, 5.75rem);
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --measure: 65ch;
+  --page-width: 72rem;
+  --sidebar-width: 14rem;
+  --radius: .1875rem;
+}

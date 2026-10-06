@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A Meridian technical note: accessible architecture diagrams, annotated code, decision tables and implementation guidance.">
+  <title>Designing for a second look / Meridian</title>
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/meridian.css">
+  <script src="../assets/meridian.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <aside class="sidebar" aria-label="Document collection">
+    <div><a class="brand" href="index.html" aria-label="Meridian home"><span class="brand-mark" aria-hidden="true"></span>meridian</a><p class="brand-caption">A system for clear thinking</p></div>
+    <nav class="document-nav" aria-label="Example documents"><p class="eyebrow nav-label">The collection</p><a href="index.html"><span>01</span><span>Research report</span></a><a href="digest.html"><span>02</span><span>Weekly digest</span></a><a href="technical.html" aria-current="page"><span>03</span><span>Technical note</span></a></nav>
+    <nav class="toc" aria-label="On this page"><p class="eyebrow nav-label">In this note</p><a href="#architecture">01 &nbsp; The architecture</a><a href="#implementation">02 &nbsp; The review gate</a><a href="#tradeoffs">03 &nbsp; Deliberate trade-offs</a><a href="#checklist">04 &nbsp; Before you ship</a><a href="#references">References &amp; scope</a></nav>
+    <div class="sidebar-footer"><span class="mini-rule"></span>Considered, not decorated.<br>Meridian &middot; Edition 1.0<br><a href="../STYLE_GUIDE.md">Design &amp; authoring guide</a></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumbs"><span class="collection-name">The collection</span><span class="breadcrumb-divider" aria-hidden="true">/</span><span>Technical note</span></div><div class="topbar-actions"><span class="sample-label">Illustrative edition</span><button class="button" type="button" data-print hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z"/><path d="M16 11h2"/></svg>Print / PDF</button></div></header>
+    <main class="document" id="content" tabindex="-1">
+      <article aria-labelledby="technical-title">
+        <header class="document-header"><div class="kicker"><span class="eyebrow">Engineering fieldnotes</span><span class="dash" aria-hidden="true"></span><span class="mono muted">TN &middot; 012</span></div><h1 class="technical-title" id="technical-title">Designing for<br><em>a second look.</em></h1><p class="standfirst">A small, explicit review gate between an AI-generated draft and the people who will rely on it.</p><dl class="meta-row"><div><dt>Discipline</dt><dd>Applied AI / Systems</dd></div><div><dt>Updated</dt><dd><time datetime="2026-09-28">28 September 2026</time></dd></div><div><dt>Reading time</dt><dd>7 minutes</dd></div><div><dt>Status</dt><dd class="status">Design proposal</dd></div></dl></header>
+        <div class="abstract"><span class="eyebrow">Abstract</span><p>Generation and publication are different responsibilities. This note sketches a workflow that preserves that boundary: retain the evidence, check the output, and send uncertain cases to a human. It is an explanatory example, not a production implementation.</p></div>
+
+        <section class="document-section" id="architecture" aria-labelledby="architecture-heading"><div class="section-heading"><span class="section-number">01</span><h2 id="architecture-heading">One boundary. Four clear stages.</h2></div><div class="prose"><p>Keep the pipeline easy to inspect. Each stage produces a concrete artifact, and nothing becomes publishable simply because generation succeeded. The review gate is the point where a draft earns its next state.</p></div>
+          <figure class="figure" aria-labelledby="pipeline-heading"><div class="figure-heading"><h3 id="pipeline-heading">A document pipeline with an explicit review boundary</h3><span class="mono">SYSTEM OVERVIEW</span></div><ol class="pipeline"><li><span class="step-id">01 / INPUT</span><strong>Collect</strong><small>Source material<br>and provenance</small></li><li><span class="step-id">02 / TRANSFORM</span><strong>Draft</strong><small>Structured claims<br>with citations</small></li><li class="step-gate"><span class="step-id">03 / BOUNDARY</span><strong>Review gate</strong><small>Validate evidence<br>and permissions</small></li><li><span class="step-id">04 / OUTPUT</span><strong>Release</strong><small>Versioned document<br>and audit record</small></li></ol><div class="branch-note"><span class="accent" aria-hidden="true">03 &darr;</span><span><strong>When checks fail:</strong> hold the draft for human review. Corrections return to the review gate; they do not bypass it.</span></div><figcaption><span class="figure-number">FIG. 01</span><span>Read left to right on larger screens and top to bottom on mobile. Each stage has a named input, output, and responsibility. A failed check never goes directly to release.</span></figcaption></figure>
+          <div class="reading-grid"><div class="prose"><p>The gate should check observable conditions, not ask the model how confident it feels. Are required fields present? Do cited sources exist in the approved collection? Has the content received the required human approval?</p></div><aside class="margin-note"><span class="eyebrow">Boundary, not magic</span><p>A valid citation proves a source exists. It does <strong>not</strong> prove the source supports the claim.</p></aside></div>
+        </section>
+
+        <section class="document-section" id="implementation" aria-labelledby="implementation-heading"><div class="section-heading"><span class="section-number">02</span><h2 id="implementation-heading">Make the stop condition explicit.</h2></div><div class="prose"><p>Return a named state rather than a boolean. The caller needs to know whether an output is ready, missing evidence, or waiting for review. A useful interface carries both the result and the reason.</p></div>
+          <div class="code-layout"><div><div class="code-panel"><div class="code-header"><span>review-gate.ts</span><button class="button" type="button" data-copy="review-code" hidden>Copy code</button></div><pre tabindex="0" aria-label="Illustrative TypeScript review gate"><code id="review-code"><span class="code-comment">// Illustration: validate inputs before this boundary.</span>
+<span class="code-keyword">async function</span> <span class="code-function">review</span>(draft: Draft): Promise&lt;Result&gt; {
+  <span class="code-keyword">const</span> evidence = <span class="code-keyword">await</span> <span class="code-function">checkSources</span>(draft);
+
+  <span class="code-keyword">if</span> (!evidence.complete) {
+    <span class="code-keyword">return</span> {
+      state: <span class="code-string">"needs-evidence"</span>,
+      reasons: evidence.missing,
+    };
+  }
+
+  <span class="code-comment">// Approval must match this exact revision.</span>
+  <span class="code-keyword">if</span> (!<span class="code-function">hasCurrentApproval</span>(draft)) {
+    <span class="code-keyword">return</span> { state: <span class="code-string">"needs-review"</span> };
+  }
+
+  <span class="code-keyword">return</span> {
+    state: <span class="code-string">"ready"</span>,
+    revision: draft.revision,
+  };
+}</code></pre><div class="code-caption">TypeScript &middot; Explanatory pseudocode &middot; Not a complete security boundary</div></div><p class="copy-status" data-copy-status role="status" aria-live="polite"></p></div><ol class="annotation-list"><li><span class="mono">NOTE 01</span><strong>Evidence is an input.</strong>Retain source IDs and excerpts alongside the draft. Do not ask reviewers to rediscover them.</li><li><span class="mono">NOTE 02</span><strong>Approval is versioned.</strong>Bind approval to an immutable revision. Editing the draft invalidates prior approval.</li><li><span class="mono">NOTE 03</span><strong>Ready is not published.</strong>A separate release step enforces permissions, writes the audit record, and publishes atomically.</li></ol></div>
+          <div class="callout"><span class="eyebrow">Failure is also a state</span><p>If a source service times out or an approval check throws, stop the release. A dependency failure must never be interpreted as evidence that a draft is safe to publish.</p></div>
+        </section>
+
+        <section class="document-section" id="tradeoffs" aria-labelledby="tradeoffs-heading"><div class="section-heading"><span class="section-number">03</span><h2 id="tradeoffs-heading">The trade-offs are deliberate.</h2></div><div class="table-scroll" role="region" aria-label="Review strategy comparison" tabindex="0"><table><caption>Compare approaches by their operational consequences, not their novelty.</caption><thead><tr><th scope="col">Approach</th><th scope="col">What it buys</th><th scope="col">What it costs</th><th scope="col">Best fit</th></tr></thead><tbody><tr><th scope="row">Automatic release</th><td>Lowest latency</td><td>Errors reach readers</td><td>Low-impact, reversible work</td></tr><tr><th scope="row">Sampled review</th><td>Lower review load</td><td>Some errors remain unseen</td><td>Stable, measured workflows</td></tr><tr><th scope="row">Required approval</th><td>Accountable decisions</td><td>Human review capacity</td><td>Consequential documents</td></tr></tbody></table></div><div class="decision"><span class="eyebrow">This proposal</span><p><strong>Use required approval for consequential documents.</strong> Introduce lighter review only after the team can describe the failure modes, measure their frequency, and accept their impact.</p></div></section>
+
+        <section class="document-section" id="checklist" aria-labelledby="checklist-heading"><div class="section-heading"><span class="section-number">04</span><h2 id="checklist-heading">Before you ship</h2></div><div class="reading-grid"><div><p class="muted">Use these as review criteria, not as a claim that the example above implements them.</p><ul class="checklist"><li>Validate untrusted input against a versioned schema.</li><li>Bind evidence and approval to the exact draft revision.</li><li>Fail closed on missing sources and dependency errors.</li><li>Enforce release authorization on the server.</li><li>Test stale approvals, retries, and concurrent edits.</li><li>Record who released what, when, and from which sources.</li></ul></div><aside class="margin-note"><span class="eyebrow">The smallest useful test</span><p>Change one word in an approved draft. The next release attempt should require a new approval.</p></aside></div><details class="methodology"><summary>What this example intentionally leaves out</summary><p>The types and helper functions are illustrative and are not implemented here. A production system also needs authentication, authorization, content sanitization, idempotent writes, audit retention, privacy controls, and evidence checking suited to the domain.</p><p>No model-generated text should execute as code or become trusted HTML. Treat retrieved material and generated content as untrusted input throughout the pipeline.</p></details></section>
+
+        <section class="sources" id="references" aria-labelledby="references-heading"><h2 id="references-heading">References &amp; scope</h2><ol><li><a href="https://owasp.org/www-project-top-10-for-large-language-model-applications/">OWASP: Top 10 for Large Language Model Applications</a>. A starting point for threat modeling AI-powered systems.</li><li><a href="https://www.w3.org/WAI/tutorials/tables/">W3C WAI: Tables Tutorial</a>. Structural guidance for accessible comparisons like the one in this note.</li><li><strong>Scope.</strong> This is an original explanatory design example. It is not an implementation guide or a security certification.</li></ol></section>
+        <a class="next-document" href="index.html"><span><span class="eyebrow">Back to the collection &middot; 01</span><strong>The evidence behind the idea.</strong></span><span aria-hidden="true">&rarr;</span></a>
+      </article>
+      <footer class="document-footer"><span class="footer-brand">meridian</span><span>Technical note &middot; Demonstration content</span><span>Make the reasoning visible.</span></footer>
+    </main>
+  </div>
+</body>
+</html>

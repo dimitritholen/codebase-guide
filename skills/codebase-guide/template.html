@@ -1,0 +1,1356 @@
+<!doctype html>
+<!--
+  ============================================================================
+  CODEBASE GUIDE — TEMPLATE
+  ----------------------------------------------------------------------------
+  This file is a fully worked SAMPLE. It describes "Quill", a FICTIONAL static
+  site generator, so you can see every component in use.
+
+  How to use it:
+    1. Copy this file. Keep <head>, all CSS and all JS exactly as they are.
+    2. Replace only the content inside <header class="masthead"> and <main>,
+       and the entries in the sidebar <nav class="toc">.
+    3. Look for comments that start with "SLOT:" — they explain what goes where.
+    4. The file must stay 100% self-contained: no external fonts, scripts,
+       images or stylesheets. Diagrams are inline SVG.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- SLOT: "<Project name> — Codebase guide" -->
+<title>Quill — Codebase guide</title>
+<meta name="description" content="How the Quill codebase works: what it does, how it is built, and where each thing lives.">
+<script>
+  /* Apply the saved theme before first paint (prevents a flash). */
+  (function () {
+    try {
+      var t = localStorage.getItem('codebase-guide-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+/* =========================================================================
+   1. DESIGN TOKENS
+   ========================================================================= */
+:root {
+  color-scheme: light dark;
+
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, "Bitstream Charter", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Paper & ink (light) */
+  --paper: #f8f4ec;
+  --paper-2: #fffdf8;
+  --paper-3: #f1ebdf;
+  --ink: #1f1a15;
+  --ink-2: #4a4239;
+  --ink-3: #72685c;
+  --rule: #e2d9c9;
+  --rule-strong: #cbbfab;
+  --accent: #b0502a;
+  --accent-soft: #f3dfd3;
+
+  /* Component palette — one color per component, reused in cards,
+     diagrams and chips. Assign in the order the cards appear. */
+  --c1: #b0502a;  /* terracotta */
+  --c2: #9a7414;  /* ochre      */
+  --c3: #2b6b68;  /* teal       */
+  --c4: #7a4777;  /* plum       */
+  --c5: #56702c;  /* olive      */
+  --c6: #3d5d8c;  /* slate blue */
+  --c0: #72685c;  /* neutral: data, files, external systems */
+
+  /* Code */
+  --code-bg: #fbf8f1;
+  --code-head: #f1ebdf;
+  --code-ink: #2a241e;
+  --hl-bg: #f6e6d8;
+  --tk-kw: #9b3c1b;
+  --tk-str: #4f6b1f;
+  --tk-com: #8a8174;
+  --tk-num: #8a5a00;
+  --tk-fn: #22625f;
+  --tk-type: #6a3f7a;
+
+  --shadow: 0 1px 0 rgba(60, 40, 20, .04), 0 8px 24px -12px rgba(60, 40, 20, .18);
+  --radius: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #16140f;
+    --paper-2: #1e1b16;
+    --paper-3: #26221b;
+    --ink: #eee6d8;
+    --ink-2: #cdc3b3;
+    --ink-3: #a09585;
+    --rule: #332e26;
+    --rule-strong: #4a4337;
+    --accent: #e3825a;
+    --accent-soft: #3a2519;
+    --c1: #e3825a; --c2: #d8ad4e; --c3: #6cb8b2; --c4: #c28dc0; --c5: #a2c06e; --c6: #88a9da; --c0: #a09585;
+    --code-bg: #1b1814; --code-head: #231f19; --code-ink: #e9e1d3; --hl-bg: #3a2a1f;
+    --tk-kw: #f0936a; --tk-str: #b5cf83; --tk-com: #8a8070; --tk-num: #e5bd6a; --tk-fn: #7fc9c2; --tk-type: #cfa0d6;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #16140f;
+  --paper-2: #1e1b16;
+  --paper-3: #26221b;
+  --ink: #eee6d8;
+  --ink-2: #cdc3b3;
+  --ink-3: #a09585;
+  --rule: #332e26;
+  --rule-strong: #4a4337;
+  --accent: #e3825a;
+  --accent-soft: #3a2519;
+  --c1: #e3825a; --c2: #d8ad4e; --c3: #6cb8b2; --c4: #c28dc0; --c5: #a2c06e; --c6: #88a9da; --c0: #a09585;
+  --code-bg: #1b1814; --code-head: #231f19; --code-ink: #e9e1d3; --hl-bg: #3a2a1f;
+  --tk-kw: #f0936a; --tk-str: #b5cf83; --tk-com: #8a8070; --tk-num: #e5bd6a; --tk-fn: #7fc9c2; --tk-type: #cfa0d6;
+  --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+}
+
+.c0 { --c: var(--c0); } .c1 { --c: var(--c1); } .c2 { --c: var(--c2); }
+.c3 { --c: var(--c3); } .c4 { --c: var(--c4); } .c5 { --c: var(--c5); } .c6 { --c: var(--c6); }
+
+/* =========================================================================
+   2. BASE
+   ========================================================================= */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1.0625rem/1.72 var(--serif);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+a { color: inherit; text-decoration-color: var(--rule-strong); text-underline-offset: .18em; }
+a:hover { color: var(--accent); text-decoration-color: currentColor; }
+p { margin: 0 0 1em; }
+strong { font-weight: 650; }
+em { font-style: italic; }
+::selection { background: var(--accent-soft); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+.progress {
+  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 50;
+  background: var(--accent); transform-origin: 0 50%; transform: scaleX(0);
+}
+
+/* =========================================================================
+   3. MASTHEAD
+   ========================================================================= */
+.masthead {
+  max-width: 1200px; margin: 0 auto; padding: 72px 32px 0;
+}
+.kicker {
+  font: 600 .74rem/1 var(--sans); letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); display: flex; align-items: center; gap: .8em;
+}
+.kicker::after { content: ""; flex: 0 0 48px; height: 1px; background: currentColor; opacity: .5; }
+.masthead h1 {
+  font: 500 clamp(3rem, 8vw, 5.6rem)/0.95 var(--serif);
+  letter-spacing: -.025em; margin: 22px 0 18px;
+}
+.dek {
+  font: italic 400 clamp(1.2rem, 2.2vw, 1.5rem)/1.45 var(--serif);
+  color: var(--ink-2); max-width: 40ch; margin: 0 0 28px;
+}
+.meta {
+  display: flex; flex-wrap: wrap; gap: 6px 22px;
+  font: 400 .82rem/1.5 var(--sans); color: var(--ink-3);
+  padding: 14px 0; border-top: 1px solid var(--rule-strong);
+  border-bottom: 3px double var(--rule-strong);
+}
+.meta b { font-weight: 600; color: var(--ink-2); }
+.meta code { font: .78rem var(--mono); }
+
+/* =========================================================================
+   4. LAYOUT + SIDEBAR
+   ========================================================================= */
+.layout {
+  max-width: 1200px; margin: 0 auto; padding: 0 32px;
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px;
+}
+.toc {
+  position: sticky; top: 0; align-self: start;
+  max-height: 100vh; overflow-y: auto; padding: 48px 0 32px;
+  font: .86rem/1.4 var(--sans);
+}
+.toc-label {
+  font: 600 .68rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 12px;
+}
+.toc ol { list-style: none; margin: 0 0 32px; padding: 0; }
+.toc li a {
+  display: grid; grid-template-columns: 28px 1fr; align-items: baseline;
+  padding: 7px 0 7px 12px; margin-left: -12px; border-left: 2px solid transparent;
+  text-decoration: none; color: var(--ink-2); transition: color .15s, border-color .15s;
+}
+.toc li a span { font: .72rem var(--mono); color: var(--ink-3); }
+.toc li a:hover { color: var(--ink); }
+.toc li a.active { color: var(--accent); border-left-color: var(--accent); font-weight: 600; }
+.toc li a.active span { color: var(--accent); }
+
+.finder input {
+  width: 100%; font: .84rem var(--sans); color: var(--ink);
+  background: var(--paper-2); border: 1px solid var(--rule-strong); border-radius: 8px;
+  padding: 8px 10px;
+}
+.finder input::placeholder { color: var(--ink-3); }
+.finder ul { list-style: none; margin: 8px 0 0; padding: 0; max-height: 44vh; overflow-y: auto; }
+.finder li a {
+  display: block; padding: 6px 8px; border-radius: 6px; text-decoration: none;
+  font: .76rem/1.35 var(--mono); color: var(--ink-2); word-break: break-all;
+}
+.finder li a small { display: block; font: .7rem var(--sans); color: var(--ink-3); }
+.finder li a:hover { background: var(--paper-3); color: var(--ink); }
+.finder .empty { font: .78rem var(--sans); color: var(--ink-3); padding: 6px 2px; }
+.finder-hint { font: .74rem/1.4 var(--sans); color: var(--ink-3); margin: 8px 0 0; }
+
+.theme-toggle {
+  position: fixed; top: 16px; right: 16px; z-index: 60;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--paper-2); color: var(--ink-2);
+  border: 1px solid var(--rule-strong); box-shadow: var(--shadow);
+}
+.theme-toggle:hover { color: var(--accent); }
+.theme-toggle svg { width: 18px; height: 18px; display: none; }
+.theme-toggle[data-mode="auto"] .i-auto,
+.theme-toggle[data-mode="light"] .i-light,
+.theme-toggle[data-mode="dark"] .i-dark { display: block; }
+
+/* =========================================================================
+   5. SECTIONS + PROSE
+   ========================================================================= */
+main { padding: 8px 0 120px; min-width: 0; }
+.section { padding-top: 72px; }
+.section-head { margin: 0 0 28px; }
+.section-num {
+  display: block; font: 600 .74rem/1 var(--sans); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 12px;
+}
+.section-num b { font: 600 .9rem var(--mono); letter-spacing: 0; margin-right: .6em; }
+.section h2 {
+  font: 500 clamp(2rem, 4vw, 2.7rem)/1.08 var(--serif);
+  letter-spacing: -.015em; margin: 0 0 14px;
+}
+.section h2 code { font-size: .8em; background: none; padding: 0; color: var(--accent); }
+.section-intro { font-size: 1.12rem; color: var(--ink-2); max-width: 64ch; margin: 0; }
+.prose { max-width: 66ch; }
+.prose h3, .section h3 {
+  font: 600 1.3rem/1.25 var(--serif); letter-spacing: -.005em; margin: 40px 0 10px;
+}
+.lead { font-size: 1.26rem; line-height: 1.6; }
+.dropcap::first-letter {
+  float: left; font: 500 4.1em/.82 var(--serif);
+  padding: .07em .1em 0 0; color: var(--accent);
+}
+
+/* Inline code, file paths, function names */
+code { font-family: var(--mono); font-size: .86em; }
+:not(pre) > code {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  padding: .1em .38em; border-radius: 5px;
+}
+code.path { cursor: copy; white-space: nowrap; transition: background .15s, color .15s; }
+code.path:hover { color: var(--accent); background: var(--accent-soft); }
+code.fn { color: var(--tk-fn); background: color-mix(in srgb, var(--tk-fn) 10%, transparent); }
+.flash { animation: flash 1.6s ease-out; }
+@keyframes flash {
+  0%, 30% { background: var(--accent); color: var(--paper); box-shadow: 0 0 0 6px var(--accent-soft); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* At-a-glance facts strip */
+.facts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: 36px 0 8px; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong);
+}
+.fact { padding: 16px 18px 16px 0; }
+.fact + .fact { padding-left: 18px; border-left: 1px solid var(--rule); }
+.fact dt {
+  font: 600 .68rem/1 var(--sans); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 8px;
+}
+.fact dd { margin: 0; font: 500 1.05rem/1.35 var(--serif); }
+.fact dd code { font-size: .8rem; }
+
+/* =========================================================================
+   6. FIGURES + INLINE SVG DIAGRAM VOCABULARY
+   ========================================================================= */
+.figure { margin: 40px 0; }
+.figure-frame {
+  background: var(--paper-2); border: 1px solid var(--rule);
+  border-radius: 16px; padding: 28px; overflow-x: auto; box-shadow: var(--shadow);
+}
+.figure-frame svg { display: block; width: 100%; height: auto; min-width: 680px; }
+.figure figcaption {
+  font: .86rem/1.55 var(--sans); color: var(--ink-3); margin-top: 14px; max-width: 72ch;
+}
+.figure figcaption b { color: var(--ink); font-weight: 600; }
+.legend {
+  display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px;
+  font: .78rem var(--sans); color: var(--ink-3);
+}
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend i {
+  width: 14px; height: 10px; border-radius: 3px; display: inline-block;
+  background: color-mix(in srgb, var(--c) 18%, var(--paper-2)); border: 1.5px solid var(--c);
+}
+.legend i.line { border-style: solid; height: 0; border-width: 1.5px 0 0; border-radius: 0; width: 22px; background: none; border-color: var(--ink-2); }
+.legend i.dash { height: 0; border-width: 1.5px 0 0; border-style: dashed; border-radius: 0; width: 22px; background: none; border-color: var(--ink-3); }
+.legend i.data { border-style: dashed; }
+
+/* SVG classes. Never hard-code colors or fonts in the SVG itself. */
+.d-node rect, .d-node .shape { fill: color-mix(in srgb, var(--c) 13%, var(--paper-2)); stroke: var(--c); stroke-width: 1.5; }
+.d-node .d-title { fill: var(--ink); }
+.d-data rect, .d-data .shape { fill: var(--paper); stroke: var(--c0); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.d-actor rect, .d-actor .shape { fill: var(--paper-3); stroke: var(--rule-strong); stroke-width: 1.5; }
+.d-title { font: 600 15px var(--sans); fill: var(--ink); }
+.d-sub { font: 400 11.5px var(--mono); fill: var(--ink-3); }
+.d-note { font: italic 400 12.5px var(--serif); fill: var(--ink-3); }
+.d-edge { fill: none; stroke: var(--ink-2); stroke-width: 1.4; }
+.d-edge.dashed, .d-return { fill: none; stroke: var(--ink-3); stroke-width: 1.3; stroke-dasharray: 5 4; }
+.d-arrowhead { fill: var(--ink-2); }
+.d-arrowhead.muted { fill: var(--ink-3); }
+.d-elabel {
+  font: 500 12px var(--mono); fill: var(--ink-2);
+  paint-order: stroke; stroke: var(--paper-2); stroke-width: 5px; stroke-linejoin: round;
+}
+.d-elabel.muted { fill: var(--ink-3); }
+.d-lifeline { stroke: var(--rule-strong); stroke-width: 1.2; stroke-dasharray: 2 5; }
+.d-activation { fill: color-mix(in srgb, var(--c) 30%, var(--paper-2)); stroke: var(--c); stroke-width: 1.2; }
+.d-frame { fill: none; stroke: var(--rule-strong); stroke-width: 1.2; }
+.d-frame-tab { fill: var(--paper-3); stroke: var(--rule-strong); stroke-width: 1.2; }
+.d-frame-label { font: 600 11px var(--sans); fill: var(--ink-3); letter-spacing: .04em; }
+.d-badge circle { fill: var(--accent); }
+.d-badge text { font: 700 11px var(--sans); fill: var(--paper-2); }
+
+/* =========================================================================
+   7. GLOSSARY
+   ========================================================================= */
+.glossary {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 0 44px; margin: 32px 0 0;
+}
+.term { padding: 18px 0 20px; border-top: 1px solid var(--rule); break-inside: avoid; }
+.term dt {
+  font: 700 .78rem/1.3 var(--sans); letter-spacing: .1em; text-transform: uppercase; color: var(--ink);
+}
+.term dd { margin: 6px 0 0; font-size: 1rem; line-height: 1.6; color: var(--ink-2); }
+.term .see { display: block; margin-top: 6px; font: .76rem var(--sans); color: var(--ink-3); }
+
+/* =========================================================================
+   8. COMPONENT CARDS
+   ========================================================================= */
+.parts {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 22px; margin: 36px 0 0;
+}
+.part {
+  background: var(--paper-2); border: 1px solid var(--rule); border-radius: var(--radius);
+  border-top: 4px solid var(--c); padding: 22px 24px 20px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; scroll-margin-top: 24px;
+}
+.part-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.part h3 { margin: 0; font: 600 1.4rem/1.2 var(--serif); }
+.part-idx { font: 600 .72rem var(--mono); color: var(--c); letter-spacing: .06em; white-space: nowrap; }
+.part-root { font: .76rem var(--mono); color: var(--ink-3); margin: 4px 0 12px; display: block; background: none !important; padding: 0 !important; }
+.part h4:last-of-type { margin-top: auto; padding-top: 16px; }
+.part-what { font: italic 1.02rem/1.55 var(--serif); color: var(--ink-2); margin: 0 0 16px; }
+.part h4 {
+  font: 600 .66rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3); margin: 16px 0 8px;
+}
+.part ul { margin: 0; padding: 0; list-style: none; }
+.resp li { position: relative; padding-left: 18px; font-size: .96rem; line-height: 1.55; margin-bottom: 4px; }
+.resp li::before {
+  content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--c);
+}
+.files li {
+  display: grid; grid-template-columns: minmax(0, auto) 1fr; gap: 2px 10px; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px dotted var(--rule); font-size: .9rem; line-height: 1.45;
+}
+.files li:last-child { border-bottom: 0; }
+.files li code.path { font-size: .78rem; }
+.files li span { color: var(--ink-2); font-family: var(--sans); font-size: .82rem; }
+.talks { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 .76rem/1 var(--sans); color: var(--ink-2); text-decoration: none;
+  border: 1px solid var(--rule-strong); border-radius: 999px; padding: 6px 10px 6px 8px;
+  background: var(--paper);
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.chip:hover { border-color: var(--c); color: var(--ink); }
+.chip.none::before { background: var(--rule-strong); }
+
+/* =========================================================================
+   9. CALLOUTS
+   ========================================================================= */
+.callout {
+  display: grid; grid-template-columns: 28px 1fr; gap: 12px; margin: 28px 0;
+  padding: 16px 20px; border-radius: 10px; font-size: .98rem; line-height: 1.6;
+  background: color-mix(in srgb, var(--c) 9%, var(--paper-2));
+  border: 1px solid color-mix(in srgb, var(--c) 35%, var(--rule));
+  max-width: 72ch;
+}
+.callout .ico {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--c); color: var(--paper-2); font: 700 .85rem/1 var(--sans);
+}
+.callout-label {
+  display: block; font: 700 .68rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--c); margin: 5px 0 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.caveat { --c: var(--c2); }
+.callout.note { --c: var(--c6); }
+
+/* =========================================================================
+   10. STEPS (walkthrough)
+   ========================================================================= */
+.steps { list-style: none; margin: 36px 0 0; padding: 0; max-width: 74ch; }
+.steps > li {
+  position: relative; display: grid; grid-template-columns: 44px 1fr; gap: 0 18px;
+  padding-bottom: 26px; break-inside: avoid;
+}
+.steps > li::before {
+  content: ""; position: absolute; left: 17px; top: 38px; bottom: 4px; width: 2px;
+  background: var(--rule);
+}
+.steps > li:last-child::before { display: none; }
+.step-n {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  font: 700 .9rem/1 var(--sans); color: var(--accent);
+  border: 1.5px solid var(--accent); background: var(--paper);
+}
+.steps h4 { margin: 5px 0 4px; font: 600 1.08rem/1.35 var(--sans); }
+.where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; font: .8rem var(--sans); color: var(--ink-3); }
+.where .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); display: inline-block; }
+.steps p { margin: 0; color: var(--ink-2); font-size: 1rem; }
+
+/* =========================================================================
+   11. PATTERNS + CODE BLOCKS
+   ========================================================================= */
+.pattern { margin: 56px 0 0; padding-top: 32px; border-top: 1px solid var(--rule); }
+.pattern:first-of-type { border-top: 0; padding-top: 0; }
+.pattern-tag { font: 600 .7rem/1 var(--mono); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; }
+.pattern h3 { margin: 10px 0 10px; font-size: 1.55rem; }
+.pattern > p { max-width: 66ch; }
+
+.code {
+  margin: 22px 0 0; border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--code-bg); overflow: hidden; box-shadow: var(--shadow); break-inside: avoid;
+}
+.code-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 16px; background: var(--code-head); border-bottom: 1px solid var(--rule);
+  font: .76rem/1.3 var(--sans); color: var(--ink-3);
+}
+.code-head code.path { background: none; padding: 0; font-size: .8rem; color: var(--ink); }
+.code-head .lang {
+  font: 600 .64rem/1 var(--sans); letter-spacing: .12em; text-transform: uppercase;
+  border: 1px solid var(--rule-strong); border-radius: 4px; padding: 4px 6px; margin-left: 8px;
+}
+.code pre {
+  margin: 0; padding: 16px 20px; overflow-x: auto; tab-size: 2;
+  font: .84rem/1.7 var(--mono); color: var(--code-ink);
+}
+.code pre.numbered { padding: 14px 0; }
+.code pre code { font-size: inherit; background: none; padding: 0; }
+.line { display: block; min-height: 1.7em; padding-right: 24px; }
+.line::before {
+  content: attr(data-n); display: inline-block; width: 3.4em; padding-right: 1.3em;
+  text-align: right; color: var(--ink-3); opacity: .55; user-select: none; -webkit-user-select: none;
+}
+.line.hl { background: var(--hl-bg); box-shadow: inset 3px 0 0 var(--accent); }
+.line.hl::before { opacity: 1; color: var(--accent); }
+.tk-kw { color: var(--tk-kw); }
+.tk-str { color: var(--tk-str); }
+.tk-com { color: var(--tk-com); font-style: italic; }
+.tk-num { color: var(--tk-num); }
+.tk-fn { color: var(--tk-fn); }
+.tk-type { color: var(--tk-type); }
+.tk-dec { color: var(--tk-num); }
+
+.why {
+  margin: 0; padding: 16px 20px 16px 22px; max-width: 72ch;
+  border-left: 3px solid var(--c3);
+  background: color-mix(in srgb, var(--c3) 8%, transparent);
+  border-radius: 0 10px 10px 0; margin-top: 18px; font-size: 1rem; line-height: 1.6;
+}
+.why b {
+  display: block; font: 700 .66rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--c3); margin-bottom: 7px;
+}
+
+/* =========================================================================
+   12. FOOTER + TOAST
+   ========================================================================= */
+.colophon {
+  margin-top: 96px; padding-top: 18px; border-top: 3px double var(--rule-strong);
+  font: .8rem/1.6 var(--sans); color: var(--ink-3); max-width: 72ch;
+}
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0;
+  background: var(--ink); color: var(--paper); font: 500 .8rem var(--sans);
+  padding: 9px 14px; border-radius: 8px; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 70;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* =========================================================================
+   13. RESPONSIVE
+   ========================================================================= */
+@media (max-width: 960px) {
+  .masthead { padding: 64px 16px 0; }
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 16px; }
+  .toc {
+    position: static; max-height: none; padding: 24px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px;
+  }
+  .toc ol { margin-bottom: 0; }
+  .finder ul { max-height: 240px; }
+  .figure-frame { padding: 16px; border-radius: 12px; }
+}
+@media (max-width: 600px) {
+  body { font-size: 1rem; }
+  .toc { grid-template-columns: 1fr; gap: 20px; }
+  .parts { grid-template-columns: minmax(0, 1fr); }
+  .glossary { grid-template-columns: minmax(0, 1fr); }
+  .fact + .fact { padding-left: 0; border-left: 0; }
+  .fact { border-bottom: 1px solid var(--rule); }
+  .files li { grid-template-columns: 1fr; }
+  .lead { font-size: 1.14rem; }
+  .part { padding: 20px 18px; }
+  .steps > li { grid-template-columns: 36px 1fr; gap: 0 12px; }
+  .step-n { width: 32px; height: 32px; }
+  .steps > li::before { left: 15px; top: 34px; }
+}
+
+/* =========================================================================
+   14. PRINT (always light, no chrome, no clipped diagrams)
+   ========================================================================= */
+@media print {
+  html:root, html:root[data-theme="dark"], html:root:not([data-theme="light"]) {
+    --paper: #ffffff; --paper-2: #ffffff; --paper-3: #f4efe6;
+    --ink: #1f1a15; --ink-2: #3f382f; --ink-3: #6b6154;
+    --rule: #ddd4c4; --rule-strong: #c4b8a3; --accent: #b0502a; --accent-soft: #f3dfd3;
+    --c1: #b0502a; --c2: #9a7414; --c3: #2b6b68; --c4: #7a4777; --c5: #56702c; --c6: #3d5d8c; --c0: #72685c;
+    --code-bg: #fbf8f1; --code-head: #f1ebdf; --code-ink: #2a241e; --hl-bg: #f6e6d8;
+    --tk-kw: #9b3c1b; --tk-str: #4f6b1f; --tk-com: #8a8174; --tk-num: #8a5a00; --tk-fn: #22625f; --tk-type: #6a3f7a;
+    --shadow: none;
+  }
+  @page { margin: 16mm 14mm; }
+  body { font-size: 10.5pt; }
+  .toc, .theme-toggle, .progress, .toast { display: none !important; }
+  .masthead { padding: 0; max-width: none; }
+  .layout { display: block; max-width: none; padding: 0; }
+  main { padding: 0; }
+  .section { padding-top: 0; break-before: page; }
+  .figure-frame { overflow: visible; padding: 12px; }
+  .figure-frame svg { min-width: 0; }
+  .figure, .part, .term, .code, .callout, .why, .steps > li { break-inside: avoid; }
+  .parts { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .code pre { white-space: pre-wrap; word-break: break-word; overflow: visible; }
+  a { text-decoration: none; }
+  code.path:hover { background: inherit; color: inherit; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .flash { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress" aria-hidden="true"></div>
+
+<button class="theme-toggle" type="button" data-mode="auto" aria-label="Theme: auto (click to change)" title="Theme: auto">
+  <svg class="i-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17A8.5 8.5 0 0 0 12 3.5z" fill="currentColor"/></svg>
+  <svg class="i-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+  <svg class="i-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+</button>
+
+<!-- =====================================================================
+     MASTHEAD
+     SLOT: project name, one-sentence dek, and real metadata
+     (repo, commit hash you analyzed, generation date, estimated reading time).
+     ===================================================================== -->
+<header class="masthead">
+  <div class="kicker">Codebase guide</div>
+  <h1>Quill</h1>
+  <p class="dek">A small static-site generator that turns a folder of Markdown files into a fast, plain HTML website.</p>
+  <div class="meta">
+    <span><b>Repository</b> github.com/example/quill</span>
+    <span><b>Commit</b> <code>3f9c2a1</code></span>
+    <span><b>Generated</b> 29 September 2026</span>
+    <span><b>Reading time</b> ~12 min</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ===================================================================
+       SIDEBAR — keep the five sections; the file finder fills itself from
+       every <code class="path"> in <main>.
+       =================================================================== -->
+  <nav class="toc" aria-label="Contents">
+    <div>
+      <p class="toc-label">Contents</p>
+      <ol>
+        <li><a href="#in-one-minute"><span>01</span>In one minute</a></li>
+        <li><a href="#key-words"><span>02</span>Key words</a></li>
+        <li><a href="#main-parts"><span>03</span>The main parts</a></li>
+        <li><a href="#how-it-runs"><span>04</span>How it runs</a></li>
+        <li><a href="#patterns"><span>05</span>Patterns to know</a></li>
+      </ol>
+    </div>
+    <div class="finder">
+      <p class="toc-label">Find a file</p>
+      <input type="search" placeholder="e.g. render, config…" aria-label="Find a file mentioned in this guide">
+      <ul aria-live="polite"></ul>
+      <p class="finder-hint">Click any file path in the text to copy it.</p>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- =================================================================
+         01 — IN ONE MINUTE
+         SLOT: 3–5 plain sentences (first one gets the drop cap), a facts
+         strip with real numbers, and ONE big-picture SVG diagram.
+         ================================================================= -->
+    <section class="section" id="in-one-minute">
+      <div class="section-head">
+        <span class="section-num"><b>01</b>In one minute</span>
+        <h2>What Quill is, and the shape of it</h2>
+      </div>
+
+      <div class="prose">
+        <p class="lead dropcap">Quill reads a folder of Markdown files, wraps each one in an HTML layout, and writes a finished website to a <code>dist/</code> folder that any web server can host.</p>
+        <p>You run it from the terminal: <code>quill build</code> makes the site once, and <code>quill dev</code> keeps it rebuilding while you write, with the browser refreshing itself. It is aimed at developers and technical writers who want a blog or docs site without a JavaScript framework.</p>
+        <p>Under the hood, one <strong>build pipeline</strong> does all the work. The command line starts it, the config tells it where things are, and it hands pages to two helpers: one that reads content, one that renders HTML. Plugins can hook into each step.</p>
+      </div>
+
+      <dl class="facts">
+        <div class="fact"><dt>Language</dt><dd>TypeScript on Node&nbsp;20</dd></div>
+        <div class="fact"><dt>Starts at</dt><dd><code class="path">src/cli.ts</code></dd></div>
+        <div class="fact"><dt>Components</dt><dd>6 main parts</dd></div>
+        <div class="fact"><dt>Size</dt><dd>74 source files, 41 test files</dd></div>
+      </dl>
+
+      <!-- SLOT: big-picture diagram. viewBox width 880. Use only the d-* classes.
+           Node color class (c1…c6) must match the component's card. -->
+      <figure class="figure">
+        <div class="figure-frame">
+          <svg viewBox="0 0 880 440" role="img" aria-labelledby="fig1-title fig1-desc">
+            <title id="fig1-title">Big picture of Quill</title>
+            <desc id="fig1-desc">You run the CLI. The CLI loads the config and starts the build pipeline. The pipeline reads pages through Content, renders them with the Renderer and writes the dist folder. The dev server triggers rebuilds and serves dist.</desc>
+            <defs>
+              <marker id="arw-f1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/>
+              </marker>
+              <marker id="arw-f1-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="d-arrowhead muted"/>
+              </marker>
+            </defs>
+
+            <!-- edges first, so nodes sit on top -->
+            <path class="d-edge" d="M140,205 H186" marker-end="url(#arw-f1)"/>
+            <path class="d-edge" d="M320,205 H376" marker-end="url(#arw-f1)"/>
+            <text class="d-elabel" x="348" y="194" text-anchor="middle">build()</text>
+            <path class="d-edge" d="M255,170 V56 H381" marker-end="url(#arw-f1)"/>
+            <text class="d-elabel" x="265" y="118">loads</text>
+            <path class="d-edge" d="M430,265 L362,326" marker-end="url(#arw-f1)"/>
+            <text class="d-elabel" x="410" y="314">collectPages()</text>
+            <path class="d-edge" d="M510,265 L578,326" marker-end="url(#arw-f1)"/>
+            <text class="d-elabel" x="552" y="292">renderPage()</text>
+            <path class="d-edge" d="M560,205 H676" marker-end="url(#arw-f1)"/>
+            <text class="d-elabel" x="618" y="194" text-anchor="middle">writes</text>
+            <path class="d-edge dashed" d="M105,330 V290 H340 V252 H376" marker-end="url(#arw-f1-muted)"/>
+            <text class="d-elabel muted" x="222" y="282" text-anchor="middle">rebuilds on change</text>
+            <path class="d-edge dashed" d="M105,392 V412 H765 V244" marker-end="url(#arw-f1-muted)"/>
+            <text class="d-elabel muted" x="470" y="432" text-anchor="middle">serves dist/ with live reload</text>
+
+            <!-- nodes -->
+            <g class="d-actor">
+              <rect x="20" y="170" width="120" height="70" rx="10"/>
+              <text class="d-title" x="80" y="200" text-anchor="middle">You</text>
+              <text class="d-sub" x="80" y="222" text-anchor="middle">quill build</text>
+            </g>
+            <g class="d-node c1">
+              <rect x="190" y="170" width="130" height="70" rx="10"/>
+              <text class="d-title" x="255" y="200" text-anchor="middle">CLI</text>
+              <text class="d-sub" x="255" y="222" text-anchor="middle">src/cli.ts</text>
+            </g>
+            <g class="d-node c2">
+              <rect x="385" y="25" width="170" height="62" rx="10"/>
+              <text class="d-title" x="470" y="52" text-anchor="middle">Config</text>
+              <text class="d-sub" x="470" y="72" text-anchor="middle">src/config/</text>
+            </g>
+            <g class="d-node c3">
+              <rect x="380" y="145" width="180" height="120" rx="12"/>
+              <text class="d-title" x="470" y="195" text-anchor="middle">Build pipeline</text>
+              <text class="d-sub" x="470" y="216" text-anchor="middle">src/pipeline/</text>
+              <text class="d-note" x="470" y="238" text-anchor="middle">runs every step, fires hooks</text>
+            </g>
+            <g class="d-node c4">
+              <rect x="250" y="330" width="170" height="62" rx="10"/>
+              <text class="d-title" x="335" y="357" text-anchor="middle">Content</text>
+              <text class="d-sub" x="335" y="377" text-anchor="middle">src/content/</text>
+            </g>
+            <g class="d-node c5">
+              <rect x="520" y="330" width="170" height="62" rx="10"/>
+              <text class="d-title" x="605" y="357" text-anchor="middle">Renderer</text>
+              <text class="d-sub" x="605" y="377" text-anchor="middle">src/render/</text>
+            </g>
+            <g class="d-node c6">
+              <rect x="20" y="330" width="170" height="62" rx="10"/>
+              <text class="d-title" x="105" y="357" text-anchor="middle">Dev server</text>
+              <text class="d-sub" x="105" y="377" text-anchor="middle">src/dev/</text>
+            </g>
+            <g class="d-data">
+              <rect x="680" y="170" width="170" height="70" rx="10"/>
+              <text class="d-title" x="765" y="200" text-anchor="middle">dist/</text>
+              <text class="d-sub" x="765" y="222" text-anchor="middle">finished HTML site</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption><b>Figure 1 — The big picture.</b> Solid arrows are calls made during <code>quill build</code>; dashed arrows only happen in <code>quill dev</code>. Colors match the component cards in section 3.</figcaption>
+        <div class="legend">
+          <span><i class="c3"></i>Component</span>
+          <span><i class="c0 data"></i>Data or files on disk</span>
+          <span><i class="line"></i>Call or data flow</span>
+          <span><i class="dash"></i>Dev mode only</span>
+        </div>
+      </figure>
+    </section>
+
+    <!-- =================================================================
+         02 — KEY WORDS
+         SLOT: 6–12 terms. Plain definition (1–2 sentences), optional
+         "Defined in" pointer to a real file.
+         ================================================================= -->
+    <section class="section" id="key-words">
+      <div class="section-head">
+        <span class="section-num"><b>02</b>Key words</span>
+        <h2>The words you will run into</h2>
+        <p class="section-intro">Quill uses a handful of terms in a specific way. Learn these eight and the rest of the code reads easily.</p>
+      </div>
+
+      <dl class="glossary">
+        <div class="term">
+          <dt>Page</dt>
+          <dd>One Markdown file after it has been read and parsed: its slug, its front matter and its body.</dd>
+          <span class="see">Defined in <code class="path">src/content/types.ts</code></span>
+        </div>
+        <div class="term">
+          <dt>Front matter</dt>
+          <dd>The block of YAML at the top of a Markdown file, between two <code>---</code> lines. It holds the title, date and layout name.</dd>
+        </div>
+        <div class="term">
+          <dt>Layout</dt>
+          <dd>An HTML file in <code>layouts/</code> with <code>{{ slots }}</code> that a page's content is poured into.</dd>
+          <span class="see">Loaded by <code class="path">src/render/layouts.ts</code></span>
+        </div>
+        <div class="term">
+          <dt>Slug</dt>
+          <dd>The URL-safe name of a page, taken from its file path. <code>posts/Hello World.md</code> becomes <code>posts/hello-world</code>.</dd>
+        </div>
+        <div class="term">
+          <dt>Build graph</dt>
+          <dd>Quill's memory of what each page depended on last time, so it can skip pages that did not change.</dd>
+          <span class="see">Stored in <code>.quill/cache.json</code></span>
+        </div>
+        <div class="term">
+          <dt>Hook</dt>
+          <dd>A named moment in the build, such as <code>page:rendered</code>, where plugins may inspect or change data.</dd>
+          <span class="see">Listed in <code class="path">src/pipeline/hooks.ts</code></span>
+        </div>
+        <div class="term">
+          <dt>Plugin</dt>
+          <dd>An object with functions for one or more hooks, listed in the config. Quill ships none; users add their own.</dd>
+        </div>
+        <div class="term">
+          <dt>Result</dt>
+          <dd>A return value that is either <code>ok</code> with a value or <code>err</code> with an error. Quill uses it instead of throwing.</dd>
+          <span class="see">Defined in <code class="path">src/util/result.ts</code></span>
+        </div>
+      </dl>
+    </section>
+
+    <!-- =================================================================
+         03 — THE MAIN PARTS
+         SLOT: one .part card per component, in the same order and with the
+         same color class (c1…c6) as the diagrams. Each card: what it is,
+         responsible for (2–4 bullets), key files (2–4), talks to (chips
+         linking to other cards). Give each card id="part-<name>".
+         Add a .callout.caveat for anything unclear or apparently unused.
+         ================================================================= -->
+    <section class="section" id="main-parts">
+      <div class="section-head">
+        <span class="section-num"><b>03</b>The main parts</span>
+        <h2>Six parts, each with one job</h2>
+        <p class="section-intro">Every folder under <code>src/</code> is one component. The colors match the diagrams, so you can find a part at a glance.</p>
+      </div>
+
+      <div class="parts">
+        <!-- CARD -->
+        <article class="part c1" id="part-cli">
+          <div class="part-head"><h3>CLI</h3><span class="part-idx">01</span></div>
+          <code class="part-root">src/cli.ts · src/commands/</code>
+          <p class="part-what">The front door. It turns what you typed in the terminal into a function call.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Parsing arguments and choosing a command.</li>
+            <li>Printing the build report and setting the exit code.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/cli.ts</code><span><code class="fn">main()</code> and the command table</span></li>
+            <li><code class="path">src/commands/build.ts</code><span><code class="fn">runBuild()</code></span></li>
+            <li><code class="path">src/commands/dev.ts</code><span><code class="fn">runDev()</code></span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks">
+            <a class="chip c2" href="#part-config">Config</a>
+            <a class="chip c3" href="#part-pipeline">Build pipeline</a>
+            <a class="chip c6" href="#part-dev">Dev server</a>
+          </div>
+        </article>
+
+        <article class="part c2" id="part-config">
+          <div class="part-head"><h3>Config</h3><span class="part-idx">02</span></div>
+          <code class="part-root">src/config/</code>
+          <p class="part-what">Reads <code>quill.config.ts</code> and guarantees the rest of the code gets a complete, valid settings object.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Finding and importing the user's config file.</li>
+            <li>Validating it and filling in defaults.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/config/load.ts</code><span><code class="fn">loadConfig()</code></span></li>
+            <li><code class="path">src/config/schema.ts</code><span>the <code>ConfigSchema</code> rules</span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks"><span class="chip none">Nothing — other parts call it</span></div>
+        </article>
+
+        <article class="part c3" id="part-pipeline">
+          <div class="part-head"><h3>Build pipeline</h3><span class="part-idx">03</span></div>
+          <code class="part-root">src/pipeline/</code>
+          <p class="part-what">The conductor. It runs every build step in order and is the only part that writes the site to disk.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Deciding which pages need rebuilding.</li>
+            <li>Firing hooks so plugins can join in.</li>
+            <li>Writing HTML files to <code>dist/</code>.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/pipeline/build.ts</code><span><code class="fn">build()</code>, <code class="fn">writeOutput()</code></span></li>
+            <li><code class="path">src/pipeline/graph.ts</code><span><code class="fn">planBuild()</code></span></li>
+            <li><code class="path">src/pipeline/hooks.ts</code><span><code class="fn">runHook()</code></span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks">
+            <a class="chip c4" href="#part-content">Content</a>
+            <a class="chip c5" href="#part-render">Renderer</a>
+            <span class="chip c0">File system</span>
+          </div>
+        </article>
+
+        <article class="part c4" id="part-content">
+          <div class="part-head"><h3>Content</h3><span class="part-idx">04</span></div>
+          <code class="part-root">src/content/</code>
+          <p class="part-what">Finds your Markdown files and turns each one into a <em>Page</em>.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Listing files in the content folder.</li>
+            <li>Splitting front matter from the body.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/content/collect.ts</code><span><code class="fn">collectPages()</code></span></li>
+            <li><code class="path">src/content/parse.ts</code><span><code class="fn">parsePage()</code></span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks"><span class="chip c0">File system (read only)</span></div>
+        </article>
+
+        <article class="part c5" id="part-render">
+          <div class="part-head"><h3>Renderer</h3><span class="part-idx">05</span></div>
+          <code class="part-root">src/render/</code>
+          <p class="part-what">Turns a Page plus a layout into one HTML string. It never touches the disk.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Converting Markdown to HTML.</li>
+            <li>Choosing the layout and filling its slots.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/render/render.ts</code><span><code class="fn">renderPage()</code></span></li>
+            <li><code class="path">src/render/layouts.ts</code><span><code class="fn">loadLayouts()</code></span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks"><span class="chip none">Nothing — pure functions</span></div>
+        </article>
+
+        <article class="part c6" id="part-dev">
+          <div class="part-head"><h3>Dev server</h3><span class="part-idx">06</span></div>
+          <code class="part-root">src/dev/</code>
+          <p class="part-what">A local web server for writing: it watches your files, rebuilds, and refreshes the browser.</p>
+          <h4>Responsible for</h4>
+          <ul class="resp">
+            <li>Serving <code>dist/</code> on <code>localhost:4000</code>.</li>
+            <li>Rebuilding on file changes and pushing a reload.</li>
+          </ul>
+          <h4>Key files</h4>
+          <ul class="files">
+            <li><code class="path">src/dev/server.ts</code><span><code class="fn">startDevServer()</code></span></li>
+            <li><code class="path">src/dev/reload.ts</code><span>live-reload channel</span></li>
+          </ul>
+          <h4>Talks to</h4>
+          <div class="talks"><a class="chip c3" href="#part-pipeline">Build pipeline</a></div>
+        </article>
+      </div>
+
+      <!-- SLOT: caveat — use for anything unclear, unused or not verified. -->
+      <div class="callout caveat">
+        <span class="ico" aria-hidden="true">?</span>
+        <div>
+          <span class="callout-label">Unclear from the code</span>
+          <p><code class="path">src/legacy/feed.ts</code> builds an RSS feed, but nothing imports it and no command calls it. It looks unused. The README mentions RSS support, so it may be kept on purpose — check before deleting.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         04 — HOW IT RUNS
+         SLOT: one sequence (or flow) diagram of a REAL run, then a numbered
+         step list. Step numbers must match the numbered badges in the SVG.
+         Each step names the real file and function.
+         ================================================================= -->
+    <section class="section" id="how-it-runs">
+      <div class="section-head">
+        <span class="section-num"><b>04</b>How it runs</span>
+        <h2>Following one <code>quill build</code> from start to finish</h2>
+        <p class="section-intro">Here is what happens between pressing Enter and seeing “Built 42 pages”. The numbers in the diagram match the steps below.</p>
+      </div>
+
+      <figure class="figure">
+        <div class="figure-frame">
+          <svg viewBox="0 0 880 570" role="img" aria-labelledby="fig2-title fig2-desc">
+            <title id="fig2-title">Sequence of a quill build</title>
+            <desc id="fig2-desc">The CLI parses arguments, loads config, and calls build. The pipeline collects pages from Content, plans the build, renders each changed page with the Renderer, writes it to disk, and returns a report to the CLI.</desc>
+            <defs>
+              <marker id="arw-f2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="d-arrowhead"/>
+              </marker>
+              <marker id="arw-f2-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M0,0 L10,5 L0,10 z" class="d-arrowhead muted"/>
+              </marker>
+            </defs>
+
+            <!-- lifelines -->
+            <line class="d-lifeline" x1="80" y1="68" x2="80" y2="555"/>
+            <line class="d-lifeline" x1="220" y1="68" x2="220" y2="555"/>
+            <line class="d-lifeline" x1="370" y1="68" x2="370" y2="555"/>
+            <line class="d-lifeline" x1="520" y1="68" x2="520" y2="555"/>
+            <line class="d-lifeline" x1="670" y1="68" x2="670" y2="555"/>
+            <line class="d-lifeline" x1="810" y1="68" x2="810" y2="555"/>
+
+            <!-- lane headers -->
+            <g class="d-node c1"><rect x="15" y="16" width="130" height="52" rx="8"/><text class="d-title" x="80" y="38" text-anchor="middle">CLI</text><text class="d-sub" x="80" y="56" text-anchor="middle">cli.ts</text></g>
+            <g class="d-node c2"><rect x="155" y="16" width="130" height="52" rx="8"/><text class="d-title" x="220" y="38" text-anchor="middle">Config</text><text class="d-sub" x="220" y="56" text-anchor="middle">config/load.ts</text></g>
+            <g class="d-node c3"><rect x="300" y="16" width="140" height="52" rx="8"/><text class="d-title" x="370" y="38" text-anchor="middle">Pipeline</text><text class="d-sub" x="370" y="56" text-anchor="middle">pipeline/build.ts</text></g>
+            <g class="d-node c4"><rect x="455" y="16" width="130" height="52" rx="8"/><text class="d-title" x="520" y="38" text-anchor="middle">Content</text><text class="d-sub" x="520" y="56" text-anchor="middle">content/</text></g>
+            <g class="d-node c5"><rect x="605" y="16" width="130" height="52" rx="8"/><text class="d-title" x="670" y="38" text-anchor="middle">Renderer</text><text class="d-sub" x="670" y="56" text-anchor="middle">render/</text></g>
+            <g class="d-data"><rect x="748" y="16" width="124" height="52" rx="8"/><text class="d-title" x="810" y="38" text-anchor="middle">File system</text><text class="d-sub" x="810" y="56" text-anchor="middle">content/, dist/</text></g>
+
+            <!-- activation bar on the pipeline -->
+            <g class="c3"><rect class="d-activation" x="365" y="228" width="10" height="302" rx="2"/></g>
+
+            <!-- loop frame -->
+            <rect class="d-frame" x="330" y="384" width="500" height="118" rx="6"/>
+            <path class="d-frame-tab" d="M330,390 a6,6 0 0 1 6,-6 H516 V396 L506,406 H330 Z"/>
+            <text class="d-frame-label" x="340" y="400">LOOP · each changed page</text>
+
+            <!-- 1: main() self-call -->
+            <path class="d-edge" d="M80,96 H125 V120 H86" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="143" cy="108" r="10"/><text x="143" y="112" text-anchor="middle">1</text></g>
+            <text class="d-elabel" x="160" y="112">main() parses argv</text>
+
+            <!-- 2: loadConfig -->
+            <path class="d-edge" d="M80,160 H216" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="100" cy="146" r="10"/><text x="100" y="150" text-anchor="middle">2</text></g>
+            <text class="d-elabel" x="116" y="150">loadConfig()</text>
+            <path class="d-return" d="M220,190 H84" marker-end="url(#arw-f2-muted)"/>
+            <text class="d-elabel muted" x="150" y="183" text-anchor="middle">Config</text>
+
+            <!-- 3: build -->
+            <path class="d-edge" d="M80,228 H362" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="100" cy="214" r="10"/><text x="100" y="218" text-anchor="middle">3</text></g>
+            <text class="d-elabel" x="116" y="218">build(config)</text>
+
+            <!-- 4: collectPages -->
+            <path class="d-edge" d="M375,272 H516" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="395" cy="258" r="10"/><text x="395" y="262" text-anchor="middle">4</text></g>
+            <text class="d-elabel" x="411" y="262">collectPages()</text>
+            <path class="d-edge" d="M520,290 H806" marker-end="url(#arw-f2)"/>
+            <text class="d-elabel" x="540" y="283">glob + read *.md</text>
+            <path class="d-return" d="M520,322 H379" marker-end="url(#arw-f2-muted)"/>
+            <text class="d-elabel muted" x="448" y="315" text-anchor="middle">Page[]</text>
+
+            <!-- 5: planBuild self-call -->
+            <path class="d-edge" d="M375,346 H415 V370 H379" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="432" cy="358" r="10"/><text x="432" y="362" text-anchor="middle">5</text></g>
+            <text class="d-elabel" x="449" y="362">planBuild() — skip unchanged</text>
+
+            <!-- 6: renderPage -->
+            <path class="d-edge" d="M375,436 H666" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="395" cy="422" r="10"/><text x="395" y="426" text-anchor="middle">6</text></g>
+            <text class="d-elabel" x="411" y="426">renderPage(page)</text>
+            <path class="d-return" d="M670,460 H379" marker-end="url(#arw-f2-muted)"/>
+            <text class="d-elabel muted" x="523" y="453" text-anchor="middle">html</text>
+
+            <!-- 7: writeOutput -->
+            <path class="d-edge" d="M375,488 H806" marker-end="url(#arw-f2)"/>
+            <g class="d-badge"><circle cx="395" cy="474" r="10"/><text x="395" y="478" text-anchor="middle">7</text></g>
+            <text class="d-elabel" x="411" y="478">writeOutput(slug, html)</text>
+
+            <!-- 8: report back -->
+            <path class="d-return" d="M365,530 H84" marker-end="url(#arw-f2-muted)"/>
+            <g class="d-badge"><circle cx="100" cy="516" r="10"/><text x="100" y="520" text-anchor="middle">8</text></g>
+            <text class="d-elabel" x="116" y="520">BuildReport → exit code</text>
+          </svg>
+        </div>
+        <figcaption><b>Figure 2 — One build, in order.</b> Time runs top to bottom. Solid arrows are calls, dashed arrows are return values. Steps 6 and 7 repeat for every page that changed.</figcaption>
+      </figure>
+
+      <ol class="steps">
+        <li class="c1">
+          <span class="step-n">1</span>
+          <div>
+            <h4>Read the command</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/cli.ts</code><code class="fn">main()</code></p>
+            <p>Parses the terminal arguments and looks up <code>build</code> in its command table, which points to <code class="fn">runBuild()</code> in <code class="path">src/commands/build.ts</code>.</p>
+          </div>
+        </li>
+        <li class="c2">
+          <span class="step-n">2</span>
+          <div>
+            <h4>Load and check the config</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/config/load.ts</code><code class="fn">loadConfig()</code></p>
+            <p>Imports <code>quill.config.ts</code> and validates it against <code>ConfigSchema</code>. If anything is wrong, it lists every bad field and stops with exit code 2.</p>
+          </div>
+        </li>
+        <li class="c3">
+          <span class="step-n">3</span>
+          <div>
+            <h4>Start the build</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/pipeline/build.ts</code><code class="fn">build()</code></p>
+            <p>Fires the <code>config:resolved</code> hook through <code class="fn">runHook()</code>, so plugins can adjust settings before any file is read.</p>
+          </div>
+        </li>
+        <li class="c4">
+          <span class="step-n">4</span>
+          <div>
+            <h4>Collect the pages</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/content/collect.ts</code><code class="fn">collectPages()</code></p>
+            <p>Finds every <code>.md</code> file in the content folder and passes each one to <code class="fn">parsePage()</code>. Broken files become errors in the list, not crashes.</p>
+          </div>
+        </li>
+        <li class="c3">
+          <span class="step-n">5</span>
+          <div>
+            <h4>Decide what to rebuild</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/pipeline/graph.ts</code><code class="fn">planBuild()</code></p>
+            <p>Compares each page's content hash with <code>.quill/cache.json</code>. Pages that did not change, and whose layout did not change, are skipped.</p>
+          </div>
+        </li>
+        <li class="c5">
+          <span class="step-n">6</span>
+          <div>
+            <h4>Render each page</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/render/render.ts</code><code class="fn">renderPage()</code></p>
+            <p>Converts the Markdown to HTML, picks the layout named in the front matter (default <code>page</code>), and fills its slots.</p>
+          </div>
+        </li>
+        <li class="c3">
+          <span class="step-n">7</span>
+          <div>
+            <h4>Write it to disk</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/pipeline/build.ts</code><code class="fn">writeOutput()</code></p>
+            <p>Saves the page as <code>dist/&lt;slug&gt;/index.html</code>. This is the only function that writes the site.</p>
+          </div>
+        </li>
+        <li class="c1">
+          <span class="step-n">8</span>
+          <div>
+            <h4>Report and exit</h4>
+            <p class="where"><span class="dot"></span><code class="path">src/cli.ts</code><code class="fn">main()</code></p>
+            <p>Prints how many pages were built, skipped and failed. If any page failed, the process exits with code 1 so CI notices.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="callout note">
+        <span class="ico" aria-hidden="true">i</span>
+        <div>
+          <span class="callout-label">Good to know</span>
+          <p><code>quill dev</code> runs the same steps 2–7. The difference is that <code class="path">src/dev/server.ts</code> calls <code class="fn">build()</code> again each time a file changes, then tells the browser to reload.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         05 — PATTERNS TO KNOW
+         SLOT: one .pattern per convention: tag, title, 1–2 sentence
+         description, a REAL 5–15 line excerpt, and a .why box.
+         Code rules: escape < and & as &lt; and &amp;. Set data-lang,
+         data-start (the real first line number) and data-hl (lines to
+         highlight, using real line numbers, e.g. "23" or "21-23,27").
+         ================================================================= -->
+    <section class="section" id="patterns">
+      <div class="section-head">
+        <span class="section-num"><b>05</b>Patterns to know</span>
+        <h2>Three habits that run through the code</h2>
+        <p class="section-intro">Once you spot these, most files will feel familiar before you finish reading them.</p>
+      </div>
+
+      <article class="pattern">
+        <span class="pattern-tag">Pattern A · Errors</span>
+        <h3>Errors are returned, not thrown</h3>
+        <p>Functions that can fail return a <em>Result</em>: either <code>ok(value)</code> or <code>err(error)</code>. The caller has to check which one it got before using the value.</p>
+        <figure class="code">
+          <figcaption class="code-head"><code class="path">src/content/parse.ts</code><span>lines 18–30<span class="lang">TS</span></span></figcaption>
+          <pre data-lang="ts" data-start="18" data-hl="21-23"><code>export function parsePage(file: SourceFile): Result&lt;Page&gt; {
+  const fm = readFrontMatter(file.text);
+
+  if (!fm.ok) {
+    return err(new QuillError("E_FRONTMATTER", file.path, fm.error));
+  }
+
+  return ok({
+    slug: toSlug(file.path),
+    meta: fm.value,
+    body: stripFrontMatter(file.text),
+  });
+}</code></pre>
+        </figure>
+        <p class="why"><b>Why it's done this way</b>One broken page should not stop the whole site from building. <code class="fn">build()</code> collects every <code>err</code> and prints them together at the end, as the README's “Error reporting” section describes.</p>
+      </article>
+
+      <article class="pattern">
+        <span class="pattern-tag">Pattern B · Configuration</span>
+        <h3>Config is checked once, at the edge</h3>
+        <p>All settings pass through one schema when Quill starts. After that, every other file trusts the <code>Config</code> type and never re-checks values.</p>
+        <figure class="code">
+          <figcaption class="code-head"><code class="path">src/config/schema.ts</code><span>lines 5–16<span class="lang">TS</span></span></figcaption>
+          <pre data-lang="ts" data-start="5" data-hl="10-11"><code>export const ConfigSchema = z.object({
+  site: z.object({
+    title: z.string(),
+    baseUrl: z.string().url(),
+  }),
+  contentDir: z.string().default("content"),
+  outDir: z.string().default("dist"),
+  plugins: z.array(PluginSchema).default([]),
+});
+
+// Every other module imports this type, not the raw file.
+export type Config = z.infer&lt;typeof ConfigSchema&gt;;</code></pre>
+        </figure>
+        <p class="why"><b>Why it's done this way</b>Defaults live in one place, and a typo in the user's config fails loudly at startup instead of causing a confusing error halfway through a build.</p>
+      </article>
+
+      <article class="pattern">
+        <span class="pattern-tag">Pattern C · Extension</span>
+        <h3>Plugins join through hooks, not subclasses</h3>
+        <p>The core never imports a plugin. At fixed moments it calls <code class="fn">runHook()</code>, which passes the data through each plugin in the order the config lists them.</p>
+        <figure class="code">
+          <figcaption class="code-head"><code class="path">src/pipeline/hooks.ts</code><span>lines 8–20<span class="lang">TS</span></span></figcaption>
+          <pre data-lang="ts" data-start="8" data-hl="17"><code>export async function runHook&lt;K extends HookName&gt;(
+  name: K,
+  ctx: HookContext[K],
+  plugins: Plugin[],
+): Promise&lt;HookContext[K]&gt; {
+  let current = ctx;
+  for (const plugin of plugins) {
+    const handler = plugin.hooks?.[name];
+    if (!handler) continue;
+    current = (await handler(current)) ?? current;
+  }
+  return current;
+}</code></pre>
+        </figure>
+        <p class="why"><b>Why it's done this way</b>A plugin can change data by returning a new value, or just observe by returning nothing. The order is predictable because it is the order in the config file.</p>
+      </article>
+
+      <!-- SLOT: colophon — commit, date, and the honesty line. -->
+      <p class="colophon">Written from the source at commit <code>3f9c2a1</code> on 29 September 2026. Every claim is based on code that was read; anything marked “Unclear from the code” still needs a human to confirm it.</p>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+  var root = document.documentElement;
+  var KEY = 'codebase-guide-theme';
+
+  /* ---------- Theme toggle: auto → light → dark ---------- */
+  var btn = document.querySelector('.theme-toggle');
+  function setMode(mode) {
+    if (mode === 'light' || mode === 'dark') root.setAttribute('data-theme', mode);
+    else root.removeAttribute('data-theme');
+    if (btn) {
+      btn.dataset.mode = mode;
+      btn.title = 'Theme: ' + mode;
+      btn.setAttribute('aria-label', 'Theme: ' + mode + ' (click to change)');
+    }
+  }
+  setMode(root.getAttribute('data-theme') || 'auto');
+  if (btn) btn.addEventListener('click', function () {
+    var order = ['auto', 'light', 'dark'];
+    var next = order[(order.indexOf(btn.dataset.mode) + 1) % 3];
+    setMode(next);
+    try { next === 'auto' ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, next); } catch (e) {}
+  });
+
+  /* ---------- Reading progress ---------- */
+  var bar = document.querySelector('.progress');
+  function onScroll() {
+    var max = document.documentElement.scrollHeight - window.innerHeight;
+    if (bar) bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, window.scrollY / max) : 0) + ')';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ---------- Scrollspy for the contents list ---------- */
+  var links = {};
+  document.querySelectorAll('.toc ol a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        Object.keys(links).forEach(function (k) { links[k].classList.toggle('active', k === e.target.id); });
+      });
+    }, { rootMargin: '-25% 0px -65% 0px' });
+    document.querySelectorAll('main .section[id]').forEach(function (s) { io.observe(s); });
+  }
+
+  /* ---------- Syntax highlighting + line numbers (offline, dependency-free) ---------- */
+  var KW = new Set(('abstract and as async await break case catch class const continue def default defer del do elif else enum except export extends false final finally fn for from func function go if impl implements import in instanceof interface is lambda let match mod mut new nil none None not null of or package pass private protected pub public raise readonly return self Self static struct super switch this throw throws true True False try type typeof undefined use using var void where while with yield').split(' '));
+  var HASH_LANGS = /^(py|python|sh|bash|shell|zsh|yaml|yml|toml|rb|ruby|r|dockerfile|make|makefile|ini|conf)$/i;
+  var RE_SLASH = /(\/\/.*$|\/\*.*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(\d[\d_]*(?:\.\d+)?)\b|([A-Za-z_$][\w$]*)(?=\s*[(<])|([A-Za-z_$][\w$]*)|(@[\w.]+)/g;
+  var RE_HASH = /(#.*$)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\b(\d[\d_]*(?:\.\d+)?)\b|([A-Za-z_$][\w$]*)(?=\s*\()|([A-Za-z_$][\w$]*)|(@[\w.]+)/g;
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function span(cls, s) { return '<span class="' + cls + '">' + esc(s) + '</span>'; }
+  function highlight(line, re) {
+    var out = '', last = 0, m;
+    re.lastIndex = 0;
+    while ((m = re.exec(line))) {
+      out += esc(line.slice(last, m.index));
+      if (m[1]) out += span('tk-com', m[1]);
+      else if (m[2]) out += span('tk-str', m[2]);
+      else if (m[3]) out += span('tk-num', m[3]);
+      else if (m[4]) out += KW.has(m[4]) ? span('tk-kw', m[4]) : span('tk-fn', m[4]);
+      else if (m[5]) out += KW.has(m[5]) ? span('tk-kw', m[5]) : (/^[A-Z]/.test(m[5]) ? span('tk-type', m[5]) : esc(m[5]));
+      else if (m[6]) out += span('tk-dec', m[6]);
+      last = re.lastIndex;
+      if (m[0].length === 0) re.lastIndex++;
+    }
+    return out + esc(line.slice(last));
+  }
+  function parseRanges(s) {
+    var set = new Set();
+    (s || '').split(',').forEach(function (part) {
+      var p = part.trim().split('-').map(Number);
+      if (!p[0]) return;
+      for (var i = p[0]; i <= (p[1] || p[0]); i++) set.add(i);
+    });
+    return set;
+  }
+  document.querySelectorAll('.code pre').forEach(function (pre) {
+    var code = pre.querySelector('code') || pre;
+    var lang = pre.dataset.lang || '';
+    var re = HASH_LANGS.test(lang) ? RE_HASH : RE_SLASH;
+    var start = parseInt(pre.dataset.start || '1', 10) || 1;
+    var hl = parseRanges(pre.dataset.hl);
+    var lines = code.textContent.replace(/\n$/, '').split('\n');
+    code.innerHTML = lines.map(function (l, i) {
+      var n = start + i;
+      return '<span class="line' + (hl.has(n) ? ' hl' : '') + '" data-n="' + n + '">' + highlight(l, re) + '</span>';
+    }).join('');
+    pre.classList.add('numbered');
+  });
+
+  /* ---------- Copy a file path on click ---------- */
+  var toast = document.querySelector('.toast'), toastTimer;
+  function showToast(msg) {
+    if (!toast) return;
+    toast.textContent = msg; toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toast.classList.remove('show'); }, 1400);
+  }
+  document.querySelectorAll('main code.path').forEach(function (el) {
+    el.setAttribute('title', 'Click to copy path');
+    el.addEventListener('click', function () {
+      var text = el.textContent.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { showToast('Copied ' + text); }, function () { showToast(text); });
+      } else { showToast(text); }
+    });
+  });
+
+  /* ---------- File finder (built from every code.path in main) ---------- */
+  var index = [], seen = {};
+  document.querySelectorAll('main code.path').forEach(function (el, i) {
+    var p = el.textContent.trim();
+    if (seen[p]) return;
+    seen[p] = true;
+    if (!el.id) el.id = 'file-' + i;
+    var sec = el.closest('.section');
+    var h = sec && sec.querySelector('.section-num');
+    index.push({ path: p, id: el.id, where: h ? h.textContent.replace(/^\d+/, '').trim() : '' });
+  });
+  index.sort(function (a, b) { return a.path.localeCompare(b.path); });
+  var input = document.querySelector('.finder input'), list = document.querySelector('.finder ul');
+  function renderList(q) {
+    if (!list) return;
+    q = (q || '').toLowerCase().trim();
+    if (!q) { list.innerHTML = ''; return; }
+    var hits = index.filter(function (f) { return f.path.toLowerCase().indexOf(q) !== -1; }).slice(0, 40);
+    list.innerHTML = hits.length
+      ? hits.map(function (f) { return '<li><a href="#' + f.id + '">' + esc(f.path) + '<small>' + esc(f.where) + '</small></a></li>'; }).join('')
+      : '<li class="empty">No file matches “' + esc(q) + '”.</li>';
+  }
+  if (input) input.addEventListener('input', function () { renderList(input.value); });
+  if (list) list.addEventListener('click', function (e) {
+    var a = e.target.closest('a'); if (!a) return;
+    e.preventDefault();
+    var el = document.getElementById(a.getAttribute('href').slice(1));
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  });
+})();
+</script>
+</body>
+</html>

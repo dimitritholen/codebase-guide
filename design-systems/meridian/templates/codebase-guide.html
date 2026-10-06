@@ -1,0 +1,535 @@
+<!doctype html>
+<!--
+  ============================================================================
+  CODEBASE GUIDE / MERIDIAN TEMPLATE
+  ----------------------------------------------------------------------------
+  This file is a fully worked SAMPLE. It describes "Quill", a FICTIONAL static
+  site generator, so you can see every component in use.
+
+  How to use it:
+    1. Copy this file. Keep <head>, the shell (.sidebar, .topbar, footer) and
+       the favicon, stylesheet and script links exactly as they are (the
+       export tool finds them by path). Style with Meridian classes only; see
+       ../STYLE_GUIDE.md and ../AI_AUTHORING.md. No inline <style>.
+    2. Replace only the sidebar brand and .toc entries, the topbar
+       breadcrumb, the .document-header, the sections inside <article>, and
+       the footer text.
+    3. Look for comments that start with "SLOT:"; they explain what goes where.
+       Drop the SLOT comments and the sample label from the finished guide.
+    4. Diagrams are inline SVG using only the .diagram classes (node,
+       node-focus, node-actor, node-data, node-title, node-sub, node-note,
+       edge, edge-alt, arrowhead, arrowhead-alt, edge-label, edge-label-alt,
+       lifeline, activation, frame, frame-tab, frame-label, badge).
+    5. Code is selectable pre > code text. Mark syntax by hand with
+       .code-keyword, .code-string, .code-function and .code-comment, and
+       escape < and & as &lt; and &amp;. There are no line numbers; name the
+       real line range in the code header and point at lines in the notes.
+    6. Make it one offline file:
+       node <plugin>/design-systems/meridian/tools/export.mjs <draft.html> <out.html>
+       The export embeds styles, fonts, favicon and script, so the draft
+       may sit anywhere as long as its links still end in the same asset
+       file names.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- SLOT: "<Project name> / Codebase guide" and a one-line description. -->
+  <title>Quill / Codebase guide</title>
+  <meta name="description" content="How the Quill codebase works: what it does, how it is built, and where each thing lives.">
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/meridian.css">
+  <script src="../assets/meridian.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+
+  <!-- =====================================================================
+       SIDEBAR
+       SLOT: project name in .brand, and one .toc link per section in the
+       form "NN &nbsp; Title". The .toc hides below 960px; the sections
+       still carry their numbers there.
+       ===================================================================== -->
+  <aside class="sidebar" aria-label="Guide navigation">
+    <div><a class="brand" href="#content"><span class="brand-mark" aria-hidden="true"></span>Quill</a><p class="brand-caption">Codebase guide</p></div>
+    <nav class="toc" aria-label="On this page">
+      <p class="eyebrow nav-label">In this guide</p>
+      <a href="#in-one-minute">01 &nbsp; In one minute</a>
+      <a href="#key-words">02 &nbsp; Key words</a>
+      <a href="#main-parts">03 &nbsp; The main parts</a>
+      <a href="#how-it-runs">04 &nbsp; How it runs</a>
+      <a href="#patterns">05 &nbsp; Patterns to know</a>
+      <a href="#where-to-find">06 &nbsp; Where to find things</a>
+      <a href="#run-it">07 &nbsp; Run it yourself</a>
+      <a href="#going-deeper">08 &nbsp; Going deeper</a>
+      <a href="#colophon">About this guide</a>
+    </nav>
+    <!-- SLOT: commit and date, same as the colophon. -->
+    <div class="sidebar-footer"><span class="mini-rule"></span>Written from commit <code>3f9c2a1</code><br>29 September 2026</div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar"><div class="breadcrumbs"><span class="collection-name">Codebase guide</span><span class="breadcrumb-divider" aria-hidden="true">/</span><span>Quill</span></div><div class="topbar-actions"><!-- SLOT: remove the sample label. --><span class="sample-label">Sample: fictional project</span><button class="button" type="button" data-print hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z"/><path d="M16 11h2"/></svg>Print / PDF</button></div></header>
+
+    <main class="document" id="content" tabindex="-1">
+      <article aria-labelledby="guide-title">
+
+        <!-- =================================================================
+             MASTHEAD
+             SLOT: project name (the only h1), a one-sentence standfirst, and
+             real metadata: repository, the commit hash you analyzed, the
+             generation date, an honest reading time.
+             ================================================================= -->
+        <header class="document-header">
+          <div class="kicker"><span class="eyebrow">Codebase guide</span><span class="dash" aria-hidden="true"></span><span class="mono muted">github.com/example/quill</span></div>
+          <h1 class="technical-title" id="guide-title">Quill</h1>
+          <p class="standfirst">A small static-site generator that turns a folder of Markdown files into a fast, plain HTML website.</p>
+          <dl class="meta-row">
+            <div><dt>Repository</dt><dd>github.com/example/quill</dd></div>
+            <div><dt>Commit</dt><dd><code>3f9c2a1</code></dd></div>
+            <div><dt>Generated</dt><dd><time datetime="2026-09-29">29 September 2026</time></dd></div>
+            <div><dt>Reading time</dt><dd>About 12 minutes</dd></div>
+          </dl>
+        </header>
+
+        <!-- =================================================================
+             01 / IN ONE MINUTE
+             SLOT: 3-5 plain sentences in .summary, the most useful one first
+             with one <strong> point of emphasis, an "At a glance" .meta-row with real
+             numbers, and ONE big-picture diagram in a .figure. Mark the
+             central component .node-focus; number each node like its part in
+             section 03.
+             ================================================================= -->
+        <section class="document-section" id="in-one-minute" aria-labelledby="in-one-minute-heading">
+          <div class="section-heading"><span class="section-number">01</span><h2 id="in-one-minute-heading">What Quill is, and the shape of it</h2></div>
+          <div class="summary"><span class="eyebrow">In one minute</span><p>Quill reads a folder of Markdown files, wraps each one in an HTML layout, and writes a finished website to a <code>dist/</code> folder that <strong>any web server can host.</strong></p>
+            <p>You run it from the terminal: <code>quill build</code> makes the site once, and <code>quill dev</code> keeps it rebuilding while you write, with the browser refreshing itself. It is aimed at developers and technical writers who want a blog or docs site without a JavaScript framework.</p>
+            <p>Under the hood, one <strong>build pipeline</strong> does all the work. The command line starts it, the config tells it where things are, and it hands pages to two helpers: one that reads content, one that renders HTML. Plugins can hook into each step.</p>
+          </div>
+
+          <dl class="meta-row" aria-label="At a glance">
+            <div><dt>Language</dt><dd>TypeScript on Node&nbsp;20</dd></div>
+            <div><dt>Starts at</dt><dd><code>src/cli.ts</code></dd></div>
+            <div><dt>Components</dt><dd>6 main parts</dd></div>
+            <div><dt>Size</dt><dd>74 source files, 41 test files</dd></div>
+          </dl>
+
+          <!-- SLOT: big-picture diagram. viewBox width 880. Use only the .diagram
+               classes; ids of title, desc and markers must be unique. -->
+          <figure class="figure" aria-labelledby="fig1-heading">
+            <div class="figure-heading"><h3 id="fig1-heading">One pipeline sits between your command and the finished site</h3><span class="mono">BIG PICTURE</span></div>
+            <div class="chart-scroll" role="region" aria-label="Big-picture diagram of Quill, scrollable" tabindex="0">
+              <svg class="diagram" viewBox="0 0 880 440" role="img" aria-labelledby="fig1-title fig1-desc">
+                <title id="fig1-title">Big picture of Quill</title>
+                <desc id="fig1-desc">You run the CLI. The CLI loads the config and starts the build pipeline. The pipeline reads pages through Content, renders them with the Renderer and writes the dist folder. In dev mode the dev server triggers rebuilds and serves dist.</desc>
+                <defs>
+                  <marker id="arw-f1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
+                  <marker id="arw-f1-alt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead-alt"/></marker>
+                </defs>
+
+                <!-- edges first, so nodes sit on top -->
+                <path class="edge" d="M140,205 H186" marker-end="url(#arw-f1)"/>
+                <path class="edge" d="M320,205 H376" marker-end="url(#arw-f1)"/>
+                <text class="edge-label" x="348" y="194" text-anchor="middle">build()</text>
+                <path class="edge" d="M255,170 V56 H381" marker-end="url(#arw-f1)"/>
+                <text class="edge-label" x="265" y="118">loads</text>
+                <path class="edge" d="M430,265 L362,326" marker-end="url(#arw-f1)"/>
+                <text class="edge-label" x="410" y="314">collectPages()</text>
+                <path class="edge" d="M510,265 L578,326" marker-end="url(#arw-f1)"/>
+                <text class="edge-label" x="552" y="292">renderPage()</text>
+                <path class="edge" d="M560,205 H676" marker-end="url(#arw-f1)"/>
+                <text class="edge-label" x="618" y="194" text-anchor="middle">writes</text>
+                <path class="edge edge-alt" d="M105,330 V290 H340 V252 H376" marker-end="url(#arw-f1-alt)"/>
+                <text class="edge-label edge-label-alt" x="222" y="282" text-anchor="middle">rebuilds on change</text>
+                <path class="edge edge-alt" d="M105,392 V412 H765 V244" marker-end="url(#arw-f1-alt)"/>
+                <text class="edge-label edge-label-alt" x="470" y="432" text-anchor="middle">serves dist/ with live reload</text>
+
+                <!-- nodes -->
+                <g class="node node-actor"><rect x="20" y="170" width="120" height="70"/><text class="node-title" x="80" y="200" text-anchor="middle">You</text><text class="node-sub" x="80" y="222" text-anchor="middle">quill build</text></g>
+                <g class="node"><rect x="190" y="170" width="130" height="70"/><text class="node-title" x="255" y="200" text-anchor="middle">01 CLI</text><text class="node-sub" x="255" y="222" text-anchor="middle">src/cli.ts</text></g>
+                <g class="node"><rect x="385" y="25" width="170" height="62"/><text class="node-title" x="470" y="52" text-anchor="middle">02 Config</text><text class="node-sub" x="470" y="72" text-anchor="middle">src/config/</text></g>
+                <g class="node node-focus"><rect x="380" y="145" width="180" height="120"/><text class="node-title" x="470" y="195" text-anchor="middle">03 Build pipeline</text><text class="node-sub" x="470" y="216" text-anchor="middle">src/pipeline/</text><text class="node-note" x="470" y="238" text-anchor="middle">runs every step, fires hooks</text></g>
+                <g class="node"><rect x="250" y="330" width="170" height="62"/><text class="node-title" x="335" y="357" text-anchor="middle">04 Content</text><text class="node-sub" x="335" y="377" text-anchor="middle">src/content/</text></g>
+                <g class="node"><rect x="520" y="330" width="170" height="62"/><text class="node-title" x="605" y="357" text-anchor="middle">05 Renderer</text><text class="node-sub" x="605" y="377" text-anchor="middle">src/render/</text></g>
+                <g class="node"><rect x="20" y="330" width="170" height="62"/><text class="node-title" x="105" y="357" text-anchor="middle">06 Dev server</text><text class="node-sub" x="105" y="377" text-anchor="middle">src/dev/</text></g>
+                <g class="node node-data"><rect x="680" y="170" width="170" height="70"/><text class="node-title" x="765" y="200" text-anchor="middle">dist/</text><text class="node-sub" x="765" y="222" text-anchor="middle">finished HTML site</text></g>
+              </svg>
+            </div>
+            <div class="branch-note"><span class="accent" aria-hidden="true">06 &rarr;</span><span><strong>In <code>quill dev</code> only:</strong> the dev server calls the pipeline again on every file change, then serves <code>dist/</code> with live reload.</span></div>
+            <figcaption><span class="figure-number">FIG. 01</span><span>Solid arrows are calls made during <code>quill build</code>; dashed arrows only happen in <code>quill dev</code>. The dashed box is files on disk. Numbers match the parts in section 03.</span></figcaption>
+          </figure>
+        </section>
+
+        <!-- =================================================================
+             02 / KEY WORDS
+             SLOT: 6-12 terms. Plain definition (1-2 sentences) and, where it
+             exists, the real file that defines the term. One row per term;
+             the term is the row header. The caption is the section intro.
+             ================================================================= -->
+        <section class="document-section" id="key-words" aria-labelledby="key-words-heading">
+          <div class="section-heading"><span class="section-number">02</span><h2 id="key-words-heading">The words you will run into</h2></div>
+          <div class="table-scroll" role="region" aria-label="Glossary" tabindex="0">
+          <table>
+            <caption>Quill uses a handful of terms in a specific way. Learn these eight and the rest of the code reads easily.</caption>
+            <thead><tr><th scope="col">Term</th><th scope="col">What it means</th><th scope="col">Defined in</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Page</th><td>One Markdown file after it has been read and parsed: its slug, its front matter and its body.</td><td><code>src/content/types.ts</code></td></tr>
+              <tr><th scope="row">Front matter</th><td>The block of YAML at the top of a Markdown file, between two <code>---</code> lines. It holds the title, date and layout name.</td><td>&mdash;</td></tr>
+              <tr><th scope="row">Layout</th><td>An HTML file in <code>layouts/</code> with <code>{{ slots }}</code> that a page&rsquo;s content is poured into.</td><td><code>src/render/layouts.ts</code></td></tr>
+              <tr><th scope="row">Slug</th><td>The URL-safe name of a page, taken from its file path. <code>posts/Hello World.md</code> becomes <code>posts/hello-world</code>.</td><td>&mdash;</td></tr>
+              <tr><th scope="row">Build graph</th><td>Quill&rsquo;s memory of what each page depended on last time, so it can skip pages that did not change.</td><td><code>.quill/cache.json</code></td></tr>
+              <tr><th scope="row">Hook</th><td>A named moment in the build, such as <code>page:rendered</code>, where plugins may inspect or change data.</td><td><code>src/pipeline/hooks.ts</code></td></tr>
+              <tr><th scope="row">Plugin</th><td>An object with functions for one or more hooks, listed in the config. Quill ships none; users add their own.</td><td>&mdash;</td></tr>
+              <tr><th scope="row">Result</th><td>A return value that is either <code>ok</code> with a value or <code>err</code> with an error. Quill uses it instead of throwing.</td><td><code>src/util/result.ts</code></td></tr>
+            </tbody>
+          </table>
+          </div>
+        </section>
+
+        <!-- =================================================================
+             03 / THE MAIN PARTS
+             SLOT: one article.dispatch per component, numbered 01, 02... in
+             the same order and with the same number as the diagram nodes.
+             Each: the root path (p.mono), name (h3), what it is (one sentence),
+             what it is responsible for (one sentence, 2-4 duties), key files
+             (2-4 rows: file, function or role), and what it talks to
+             (p.takeaway linking #part-<name>). Give each id="part-<name>".
+             Put anything unclear or apparently unused in a .callout.
+             ================================================================= -->
+        <section class="document-section" id="main-parts" aria-labelledby="main-parts-heading">
+          <div class="section-heading"><span class="section-number">03</span><h2 id="main-parts-heading">Six parts, each with one job</h2></div>
+          <div class="prose"><p>Every folder under <code>src/</code> is one component. The numbers match the diagrams, so you can find a part at a glance.</p></div>
+
+          <article class="dispatch" id="part-cli" aria-labelledby="part-cli-heading"><span class="mono" aria-hidden="true">01</span><div>
+            <p class="mono muted">src/cli.ts &middot; src/commands/</p>
+            <h3 id="part-cli-heading">CLI</h3>
+            <p>The front door. It turns what you typed in the terminal into a function call.</p>
+            <p><strong>Responsible for</strong> parsing arguments and choosing a command, then printing the build report and setting the exit code.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/cli.ts</code></th><td><code>main()</code> and the command table</td></tr>
+              <tr><th scope="row"><code>src/commands/build.ts</code></th><td><code>runBuild()</code></td></tr>
+              <tr><th scope="row"><code>src/commands/dev.ts</code></th><td><code>runDev()</code></td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to <a href="#part-config">Config</a>, <a href="#part-pipeline">Build pipeline</a> and <a href="#part-dev">Dev server</a>.</p>
+          </div></article>
+
+          <article class="dispatch" id="part-config" aria-labelledby="part-config-heading"><span class="mono" aria-hidden="true">02</span><div>
+            <p class="mono muted">src/config/</p>
+            <h3 id="part-config-heading">Config</h3>
+            <p>Reads <code>quill.config.ts</code> and guarantees the rest of the code gets a complete, valid settings object.</p>
+            <p><strong>Responsible for</strong> finding and importing the user&rsquo;s config file, validating it, and filling in defaults.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/config/load.ts</code></th><td><code>loadConfig()</code></td></tr>
+              <tr><th scope="row"><code>src/config/schema.ts</code></th><td>the <code>ConfigSchema</code> rules</td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to nothing; other parts call it.</p>
+          </div></article>
+
+          <article class="dispatch" id="part-pipeline" aria-labelledby="part-pipeline-heading"><span class="mono" aria-hidden="true">03</span><div>
+            <p class="mono muted">src/pipeline/</p>
+            <h3 id="part-pipeline-heading">Build pipeline</h3>
+            <p>The conductor. It runs every build step in order and is the only part that writes the site to disk.</p>
+            <p><strong>Responsible for</strong> deciding which pages need rebuilding, firing hooks so plugins can join in, and writing HTML files to <code>dist/</code>.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/pipeline/build.ts</code></th><td><code>build()</code>, <code>writeOutput()</code></td></tr>
+              <tr><th scope="row"><code>src/pipeline/graph.ts</code></th><td><code>planBuild()</code></td></tr>
+              <tr><th scope="row"><code>src/pipeline/hooks.ts</code></th><td><code>runHook()</code></td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to <a href="#part-content">Content</a>, <a href="#part-render">Renderer</a> and the file system.</p>
+          </div></article>
+
+          <article class="dispatch" id="part-content" aria-labelledby="part-content-heading"><span class="mono" aria-hidden="true">04</span><div>
+            <p class="mono muted">src/content/</p>
+            <h3 id="part-content-heading">Content</h3>
+            <p>Finds your Markdown files and turns each one into a <strong>Page</strong>.</p>
+            <p><strong>Responsible for</strong> listing files in the content folder and splitting front matter from the body.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/content/collect.ts</code></th><td><code>collectPages()</code></td></tr>
+              <tr><th scope="row"><code>src/content/parse.ts</code></th><td><code>parsePage()</code></td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to the file system, read only.</p>
+          </div></article>
+
+          <article class="dispatch" id="part-render" aria-labelledby="part-render-heading"><span class="mono" aria-hidden="true">05</span><div>
+            <p class="mono muted">src/render/</p>
+            <h3 id="part-render-heading">Renderer</h3>
+            <p>Turns a Page plus a layout into one HTML string. It never touches the disk.</p>
+            <p><strong>Responsible for</strong> converting Markdown to HTML, choosing the layout and filling its slots.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/render/render.ts</code></th><td><code>renderPage()</code></td></tr>
+              <tr><th scope="row"><code>src/render/layouts.ts</code></th><td><code>loadLayouts()</code></td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to nothing; these are pure functions.</p>
+          </div></article>
+
+          <article class="dispatch" id="part-dev" aria-labelledby="part-dev-heading"><span class="mono" aria-hidden="true">06</span><div>
+            <p class="mono muted">src/dev/</p>
+            <h3 id="part-dev-heading">Dev server</h3>
+            <p>A local web server for writing: it watches your files, rebuilds, and refreshes the browser.</p>
+            <p><strong>Responsible for</strong> serving <code>dist/</code> on <code>localhost:4000</code>, rebuilding on file changes and pushing a reload.</p>
+            <table><caption>Key files</caption><thead><tr><th scope="col">File</th><th scope="col">What is there</th></tr></thead><tbody>
+              <tr><th scope="row"><code>src/dev/server.ts</code></th><td><code>startDevServer()</code></td></tr>
+              <tr><th scope="row"><code>src/dev/reload.ts</code></th><td>live-reload channel</td></tr>
+            </tbody></table>
+            <p class="takeaway">Talks to <a href="#part-pipeline">Build pipeline</a>.</p>
+          </div></article>
+
+          <!-- SLOT: caveat. Use for anything unclear, unused or not verified. -->
+          <div class="callout"><span class="eyebrow">Unclear from the code</span><p><code>src/legacy/feed.ts</code> builds an RSS feed, but nothing imports it and no command calls it. It looks unused. The README mentions RSS support, so it may be kept on purpose; check before deleting.</p></div>
+        </section>
+
+        <!-- =================================================================
+             04 / HOW IT RUNS
+             SLOT: one sequence (or flow) diagram of a REAL run, then an
+             ol.findings of steps. Badge numbers in the SVG (01, 02...) must
+             match the step order. Each step names the real file and function
+             in its first line. A side note goes in the .margin-note.
+             ================================================================= -->
+        <section class="document-section" id="how-it-runs" aria-labelledby="how-it-runs-heading">
+          <div class="section-heading"><span class="section-number">04</span><h2 id="how-it-runs-heading">Following one build from start to finish</h2></div>
+          <div class="prose"><p>Here is what happens between pressing Enter and seeing &ldquo;Built 42 pages&rdquo;. The numbers in the diagram match the steps below.</p></div>
+
+          <figure class="figure" aria-labelledby="fig2-heading">
+            <div class="figure-heading"><h3 id="fig2-heading">One build, in order: the pipeline does the work, the CLI only starts and reports</h3><span class="mono">SEQUENCE</span></div>
+            <div class="chart-scroll" role="region" aria-label="Sequence diagram of a quill build, scrollable" tabindex="0">
+              <svg class="diagram" viewBox="0 0 880 570" role="img" aria-labelledby="fig2-title fig2-desc">
+                <title id="fig2-title">Sequence of a quill build</title>
+                <desc id="fig2-desc">The CLI parses arguments, loads config, and calls build. The pipeline collects pages from Content, plans the build, renders each changed page with the Renderer, writes it to disk, and returns a report to the CLI.</desc>
+                <defs>
+                  <marker id="arw-f2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker>
+                  <marker id="arw-f2-alt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead-alt"/></marker>
+                </defs>
+
+                <!-- lifelines -->
+                <line class="lifeline" x1="80" y1="68" x2="80" y2="555"/>
+                <line class="lifeline" x1="220" y1="68" x2="220" y2="555"/>
+                <line class="lifeline" x1="370" y1="68" x2="370" y2="555"/>
+                <line class="lifeline" x1="520" y1="68" x2="520" y2="555"/>
+                <line class="lifeline" x1="670" y1="68" x2="670" y2="555"/>
+                <line class="lifeline" x1="810" y1="68" x2="810" y2="555"/>
+
+                <!-- lane headers -->
+                <g class="node"><rect x="15" y="16" width="130" height="52"/><text class="node-title" x="80" y="38" text-anchor="middle">01 CLI</text><text class="node-sub" x="80" y="56" text-anchor="middle">cli.ts</text></g>
+                <g class="node"><rect x="155" y="16" width="130" height="52"/><text class="node-title" x="220" y="38" text-anchor="middle">02 Config</text><text class="node-sub" x="220" y="56" text-anchor="middle">config/load.ts</text></g>
+                <g class="node node-focus"><rect x="300" y="16" width="140" height="52"/><text class="node-title" x="370" y="38" text-anchor="middle">03 Pipeline</text><text class="node-sub" x="370" y="56" text-anchor="middle">pipeline/build.ts</text></g>
+                <g class="node"><rect x="455" y="16" width="130" height="52"/><text class="node-title" x="520" y="38" text-anchor="middle">04 Content</text><text class="node-sub" x="520" y="56" text-anchor="middle">content/</text></g>
+                <g class="node"><rect x="605" y="16" width="130" height="52"/><text class="node-title" x="670" y="38" text-anchor="middle">05 Renderer</text><text class="node-sub" x="670" y="56" text-anchor="middle">render/</text></g>
+                <g class="node node-data"><rect x="748" y="16" width="124" height="52"/><text class="node-title" x="810" y="38" text-anchor="middle">File system</text><text class="node-sub" x="810" y="56" text-anchor="middle">content/, dist/</text></g>
+
+                <!-- activation bar on the pipeline -->
+                <rect class="activation" x="365" y="228" width="10" height="302"/>
+
+                <!-- loop frame -->
+                <rect class="frame" x="330" y="384" width="500" height="118"/>
+                <path class="frame-tab" d="M330,384 H516 V396 L506,406 H330 Z"/>
+                <text class="frame-label" x="340" y="400">LOOP &middot; each changed page</text>
+
+                <!-- 01: main() self-call -->
+                <path class="edge" d="M80,96 H125 V120 H86" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="145" cy="108" r="11"/><text x="145" y="112" text-anchor="middle">01</text></g>
+                <text class="edge-label" x="163" y="112">main() parses argv</text>
+
+                <!-- 02: loadConfig -->
+                <path class="edge" d="M80,160 H216" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="100" cy="146" r="11"/><text x="100" y="150" text-anchor="middle">02</text></g>
+                <text class="edge-label" x="117" y="150">loadConfig()</text>
+                <path class="edge edge-alt" d="M220,190 H84" marker-end="url(#arw-f2-alt)"/>
+                <text class="edge-label edge-label-alt" x="150" y="183" text-anchor="middle">Config</text>
+
+                <!-- 03: build -->
+                <path class="edge" d="M80,228 H362" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="100" cy="214" r="11"/><text x="100" y="218" text-anchor="middle">03</text></g>
+                <text class="edge-label" x="117" y="218">build(config)</text>
+
+                <!-- 04: collectPages -->
+                <path class="edge" d="M375,272 H516" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="395" cy="258" r="11"/><text x="395" y="262" text-anchor="middle">04</text></g>
+                <text class="edge-label" x="412" y="262">collectPages()</text>
+                <path class="edge" d="M520,290 H806" marker-end="url(#arw-f2)"/>
+                <text class="edge-label" x="540" y="283">glob + read *.md</text>
+                <path class="edge edge-alt" d="M520,322 H379" marker-end="url(#arw-f2-alt)"/>
+                <text class="edge-label edge-label-alt" x="448" y="315" text-anchor="middle">Page[]</text>
+
+                <!-- 05: planBuild self-call -->
+                <path class="edge" d="M375,346 H415 V370 H379" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="434" cy="358" r="11"/><text x="434" y="362" text-anchor="middle">05</text></g>
+                <text class="edge-label" x="452" y="362">planBuild() skips unchanged pages</text>
+
+                <!-- 06: renderPage -->
+                <path class="edge" d="M375,436 H666" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="395" cy="422" r="11"/><text x="395" y="426" text-anchor="middle">06</text></g>
+                <text class="edge-label" x="412" y="426">renderPage(page)</text>
+                <path class="edge edge-alt" d="M670,460 H379" marker-end="url(#arw-f2-alt)"/>
+                <text class="edge-label edge-label-alt" x="523" y="453" text-anchor="middle">html</text>
+
+                <!-- 07: writeOutput -->
+                <path class="edge" d="M375,488 H806" marker-end="url(#arw-f2)"/>
+                <g class="badge"><circle cx="395" cy="474" r="11"/><text x="395" y="478" text-anchor="middle">07</text></g>
+                <text class="edge-label" x="412" y="478">writeOutput(slug, html)</text>
+
+                <!-- 08: report back -->
+                <path class="edge edge-alt" d="M365,530 H84" marker-end="url(#arw-f2-alt)"/>
+                <g class="badge"><circle cx="100" cy="516" r="11"/><text x="100" y="520" text-anchor="middle">08</text></g>
+                <text class="edge-label" x="117" y="520">BuildReport &rarr; exit code</text>
+              </svg>
+            </div>
+            <figcaption><span class="figure-number">FIG. 02</span><span>Time runs top to bottom. Solid arrows are calls, dashed arrows are return values. Steps 06 and 07 repeat for every page that changed.</span></figcaption>
+          </figure>
+
+          <div class="reading-grid">
+            <ol class="findings">
+              <li><div><h3>Read the command</h3><p class="mono"><code>src/cli.ts</code> &middot; <code>main()</code></p><p>Parses the terminal arguments and looks up <code>build</code> in its command table, which points to <code>runBuild()</code> in <code>src/commands/build.ts</code>.</p></div></li>
+              <li><div><h3>Load and check the config</h3><p class="mono"><code>src/config/load.ts</code> &middot; <code>loadConfig()</code></p><p>Imports <code>quill.config.ts</code> and validates it against <code>ConfigSchema</code>. If anything is wrong, it lists every bad field and stops with exit code 2.</p></div></li>
+              <li><div><h3>Start the build</h3><p class="mono"><code>src/pipeline/build.ts</code> &middot; <code>build()</code></p><p>Fires the <code>config:resolved</code> hook through <code>runHook()</code>, so plugins can adjust settings before any file is read.</p></div></li>
+              <li><div><h3>Collect the pages</h3><p class="mono"><code>src/content/collect.ts</code> &middot; <code>collectPages()</code></p><p>Finds every <code>.md</code> file in the content folder and passes each one to <code>parsePage()</code>. Broken files become errors in the list, not crashes.</p></div></li>
+              <li><div><h3>Decide what to rebuild</h3><p class="mono"><code>src/pipeline/graph.ts</code> &middot; <code>planBuild()</code></p><p>Compares each page&rsquo;s content hash with <code>.quill/cache.json</code>. Pages that did not change, and whose layout did not change, are skipped.</p></div></li>
+              <li><div><h3>Render each page</h3><p class="mono"><code>src/render/render.ts</code> &middot; <code>renderPage()</code></p><p>Converts the Markdown to HTML, picks the layout named in the front matter (default <code>page</code>), and fills its slots.</p></div></li>
+              <li><div><h3>Write it to disk</h3><p class="mono"><code>src/pipeline/build.ts</code> &middot; <code>writeOutput()</code></p><p>Saves the page as <code>dist/&lt;slug&gt;/index.html</code>. This is the only function that writes the site.</p></div></li>
+              <li><div><h3>Report and exit</h3><p class="mono"><code>src/cli.ts</code> &middot; <code>main()</code></p><p>Prints how many pages were built, skipped and failed. If any page failed, the process exits with code 1 so CI notices.</p></div></li>
+            </ol>
+            <!-- SLOT: side note beside the steps it qualifies. -->
+            <aside class="margin-note"><span class="eyebrow">Good to know</span><p><code>quill dev</code> runs the same steps 02&ndash;07. The difference is that <code>src/dev/server.ts</code> calls <code>build()</code> again each time a file changes, then tells the browser to reload.</p></aside>
+          </div>
+        </section>
+
+        <!-- =================================================================
+             05 / PATTERNS TO KNOW
+             SLOT: one article.document-section per convention: letter and
+             short tag in a .section-heading, an h3 title, a 1-2 sentence
+             description, a REAL 5-15 line excerpt in a .code-layout, and a
+             .decision with the reason. Code rules: escape < and & as &lt; and
+             &amp;; mark syntax by hand; put the real path and line range in
+             the .code-header; point at the key lines (real line numbers) in
+             the .annotation-list instead of highlighting them.
+             ================================================================= -->
+        <section class="document-section" id="patterns" aria-labelledby="patterns-heading">
+          <div class="section-heading"><span class="section-number">05</span><h2 id="patterns-heading">Three habits that run through the code</h2></div>
+          <div class="prose"><p>Once you spot these, most files will feel familiar before you finish reading them.</p></div>
+
+          <article class="document-section" aria-labelledby="pattern-a-heading">
+            <div class="section-heading"><span class="section-number">A</span><h3 id="pattern-a-heading">Errors are returned, not thrown</h3><span class="section-tag">ERRORS</span></div>
+            <div class="prose"><p>Functions that can fail return a <strong>Result</strong>: either <code>ok(value)</code> or <code>err(error)</code>. The caller has to check which one it got before using the value.</p></div>
+            <div class="code-layout"><div class="code-panel"><div class="code-header"><span>src/content/parse.ts &middot; lines 18&ndash;30</span></div><pre tabindex="0" aria-label="Excerpt of src/content/parse.ts, lines 18 to 30"><code><span class="code-keyword">export function</span> <span class="code-function">parsePage</span>(file: SourceFile): Result&lt;Page&gt; {
+  <span class="code-keyword">const</span> fm = <span class="code-function">readFrontMatter</span>(file.text);
+
+  <span class="code-keyword">if</span> (!fm.ok) {
+    <span class="code-keyword">return</span> <span class="code-function">err</span>(<span class="code-keyword">new</span> <span class="code-function">QuillError</span>(<span class="code-string">"E_FRONTMATTER"</span>, file.path, fm.error));
+  }
+
+  <span class="code-keyword">return</span> <span class="code-function">ok</span>({
+    slug: <span class="code-function">toSlug</span>(file.path),
+    meta: fm.value,
+    body: <span class="code-function">stripFrontMatter</span>(file.text),
+  });
+}</code></pre><div class="code-caption">TypeScript &middot; excerpt, unchanged</div></div><ol class="annotation-list"><li><span class="mono">LINES 21&ndash;23</span><strong>Failure is a value.</strong>A bad front matter block becomes an <code>err</code> that names the file; nothing is thrown.</li><li><span class="mono">LINES 25&ndash;29</span><strong>Success is wrapped too.</strong>Callers unwrap <code>ok</code> the same way every time.</li></ol></div>
+            <div class="decision"><span class="eyebrow">Why</span><p>One broken page should not stop the whole site from building. <code>build()</code> collects every <code>err</code> and prints them together at the end, as the README&rsquo;s &ldquo;Error reporting&rdquo; section describes.</p></div>
+          </article>
+
+          <article class="document-section" aria-labelledby="pattern-b-heading">
+            <div class="section-heading"><span class="section-number">B</span><h3 id="pattern-b-heading">Config is checked once, at the edge</h3><span class="section-tag">CONFIGURATION</span></div>
+            <div class="prose"><p>All settings pass through one schema when Quill starts. After that, every other file trusts the <code>Config</code> type and never re-checks values.</p></div>
+            <div class="code-layout"><div class="code-panel"><div class="code-header"><span>src/config/schema.ts &middot; lines 5&ndash;16</span></div><pre tabindex="0" aria-label="Excerpt of src/config/schema.ts, lines 5 to 16"><code><span class="code-keyword">export const</span> ConfigSchema = z.<span class="code-function">object</span>({
+  site: z.<span class="code-function">object</span>({
+    title: z.<span class="code-function">string</span>(),
+    baseUrl: z.<span class="code-function">string</span>().<span class="code-function">url</span>(),
+  }),
+  contentDir: z.<span class="code-function">string</span>().<span class="code-function">default</span>(<span class="code-string">"content"</span>),
+  outDir: z.<span class="code-function">string</span>().<span class="code-function">default</span>(<span class="code-string">"dist"</span>),
+  plugins: z.<span class="code-function">array</span>(PluginSchema).<span class="code-function">default</span>([]),
+});
+
+<span class="code-comment">// Every other module imports this type, not the raw file.</span>
+<span class="code-keyword">export type</span> Config = z.infer&lt;<span class="code-keyword">typeof</span> ConfigSchema&gt;;</code></pre><div class="code-caption">TypeScript &middot; excerpt, unchanged</div></div><ol class="annotation-list"><li><span class="mono">LINES 10&ndash;11</span><strong>Defaults live here.</strong>No other file decides where content or output goes.</li><li><span class="mono">LINE 16</span><strong>The type follows the schema.</strong>Change a rule and every caller&rsquo;s types change with it.</li></ol></div>
+            <div class="decision"><span class="eyebrow">Why</span><p>Defaults live in one place, and a typo in the user&rsquo;s config fails loudly at startup instead of causing a confusing error halfway through a build.</p></div>
+          </article>
+
+          <article class="document-section" aria-labelledby="pattern-c-heading">
+            <div class="section-heading"><span class="section-number">C</span><h3 id="pattern-c-heading">Plugins join through hooks, not subclasses</h3><span class="section-tag">EXTENSION</span></div>
+            <div class="prose"><p>The core never imports a plugin. At fixed moments it calls <code>runHook()</code>, which passes the data through each plugin in the order the config lists them.</p></div>
+            <div class="code-layout"><div class="code-panel"><div class="code-header"><span>src/pipeline/hooks.ts &middot; lines 8&ndash;20</span></div><pre tabindex="0" aria-label="Excerpt of src/pipeline/hooks.ts, lines 8 to 20"><code><span class="code-keyword">export async function</span> <span class="code-function">runHook</span>&lt;K <span class="code-keyword">extends</span> HookName&gt;(
+  name: K,
+  ctx: HookContext[K],
+  plugins: Plugin[],
+): Promise&lt;HookContext[K]&gt; {
+  <span class="code-keyword">let</span> current = ctx;
+  <span class="code-keyword">for</span> (<span class="code-keyword">const</span> plugin <span class="code-keyword">of</span> plugins) {
+    <span class="code-keyword">const</span> handler = plugin.hooks?.[name];
+    <span class="code-keyword">if</span> (!handler) <span class="code-keyword">continue</span>;
+    current = (<span class="code-keyword">await</span> <span class="code-function">handler</span>(current)) ?? current;
+  }
+  <span class="code-keyword">return</span> current;
+}</code></pre><div class="code-caption">TypeScript &middot; excerpt, unchanged</div></div><ol class="annotation-list"><li><span class="mono">LINE 17</span><strong>Return to change, or not.</strong>A handler that returns nothing leaves the data as it was.</li></ol></div>
+            <div class="decision"><span class="eyebrow">Why</span><p>A plugin can change data by returning a new value, or just observe by returning nothing. The order is predictable because it is the order in the config file.</p></div>
+          </article>
+        </section>
+
+        <!-- =================================================================
+             06 / WHERE TO FIND THINGS
+             SLOT: one row per feature and common task: "I want to..." as the
+             row header, the real file or folder in the second column, and an
+             optional pointer in the third. Cover every feature. The caption
+             is the section intro.
+             ================================================================= -->
+        <section class="document-section" id="where-to-find" aria-labelledby="where-to-find-heading">
+          <div class="section-heading"><span class="section-number">06</span><h2 id="where-to-find-heading">Where to find things</h2></div>
+          <div class="table-scroll" role="region" aria-label="Task-to-file map" tabindex="0">
+            <table>
+              <caption>Start from the task you have. Each row names the first file to open; paths are relative to the repository root.</caption>
+              <thead><tr><th scope="col">I want to&hellip;</th><th scope="col">Look in</th><th scope="col">Start with</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Add a command</th><td><code>src/commands/</code></td><td>Register it in the table in <code>src/cli.ts</code></td></tr>
+                <tr><th scope="row">Add or change a setting</th><td><code>src/config/schema.ts</code></td><td><code>ConfigSchema</code></td></tr>
+                <tr><th scope="row">Change how Markdown files are found or parsed</th><td><code>src/content/</code></td><td><code>collectPages()</code>, <code>parsePage()</code></td></tr>
+                <tr><th scope="row">Change the HTML a page becomes</th><td><code>src/render/render.ts</code></td><td><code>renderPage()</code></td></tr>
+                <tr><th scope="row">Add a layout</th><td><code>layouts/</code></td><td>Loaded by <code>loadLayouts()</code></td></tr>
+                <tr><th scope="row">Add a hook for plugins</th><td><code>src/pipeline/hooks.ts</code></td><td><code>HookName</code>, <code>runHook()</code></td></tr>
+                <tr><th scope="row">Fix a page that is not rebuilt</th><td><code>src/pipeline/graph.ts</code></td><td><code>planBuild()</code></td></tr>
+                <tr><th scope="row">Change the dev server or live reload</th><td><code>src/dev/</code></td><td><code>startDevServer()</code></td></tr>
+                <tr><th scope="row">Find the tests</th><td><code>test/</code></td><td>One file per source file</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- =================================================================
+             07 / RUN IT YOURSELF
+             SLOT: setup, run and test commands copied from the repo (README,
+             Makefile, package.json, pyproject.toml), in one .code-panel with a
+             copy button, and one note per group naming where it came from.
+             ================================================================= -->
+        <section class="document-section" id="run-it" aria-labelledby="run-it-heading">
+          <div class="section-heading"><span class="section-number">07</span><h2 id="run-it-heading">Run it yourself</h2></div>
+          <div class="prose"><p>Three commands take you from a fresh clone to a built sample site and a green test run.</p></div>
+          <div class="code-layout"><div><div class="code-panel"><div class="code-header"><span>shell</span><button class="button" type="button" data-copy="run-code" hidden>Copy commands</button></div><pre tabindex="0" aria-label="Setup, build and test commands"><code id="run-code"><span class="code-comment"># Set up (Node 20)</span>
+npm install
+
+<span class="code-comment"># Build the example site into dist/</span>
+npx quill build
+
+<span class="code-comment"># Run the tests</span>
+npm test</code></pre><div class="code-caption">Shell &middot; from README.md and package.json</div></div><p class="copy-status" data-copy-status role="status" aria-live="polite"></p></div><ol class="annotation-list"><li><span class="mono">SETUP</span><strong>Node 20 or newer.</strong>Set in <code>package.json</code> under <code>engines</code>.</li><li><span class="mono">RUN</span><strong>Use <code>quill dev</code> while writing.</strong>It serves <code>dist/</code> on port 4000.</li><li><span class="mono">TEST</span><strong>No network needed.</strong>Tests build fixtures in a temporary folder.</li></ol></div>
+        </section>
+
+        <!-- =================================================================
+             08 / GOING DEEPER
+             SLOT: invariants, trade-offs, limits and gotchas, each in its own
+             details.methodology. Say in the prose above them what kinds of
+             detail follow; never hide the only mention of a key limitation.
+             ================================================================= -->
+        <section class="document-section" id="going-deeper" aria-labelledby="going-deeper-heading">
+          <div class="section-heading"><span class="section-number">08</span><h2 id="going-deeper-heading">Going deeper</h2></div>
+          <div class="prose"><p>The rules the code relies on, the trade-offs it makes, and the places it surprises people. The most important: <strong>only <code>writeOutput()</code> writes the site.</strong></p></div>
+          <details class="methodology"><summary>Invariant: one function writes to <code>dist/</code></summary><p>Everything else returns data. If you need a new output file, route it through <code>writeOutput()</code> in <code>src/pipeline/build.ts</code> so the build graph records it.</p></details>
+          <details class="methodology"><summary>Trade-off: incremental builds trust the cache</summary><p><code>planBuild()</code> skips a page when its hash and its layout&rsquo;s hash are unchanged. A plugin that reads other files can therefore see stale output; delete <code>.quill/cache.json</code> to force a full build.</p></details>
+          <details class="methodology"><summary>Gotcha: plugin order matters</summary><p>Hooks run plugins in the order the config lists them, and each receives the previous one&rsquo;s result. Swapping two plugins can change the output.</p></details>
+        </section>
+
+        <!-- SLOT: colophon. Commit, date, and the honesty line. -->
+        <section class="sources" id="colophon" aria-labelledby="colophon-heading"><h2 id="colophon-heading">About this guide</h2><ol><li>Written from the source at commit <code>3f9c2a1</code> on 29 September 2026.</li><li><strong>Scope.</strong> Every claim is based on code that was read; anything marked &ldquo;Unclear from the code&rdquo; still needs a human to confirm it.</li></ol></section>
+      </article>
+      <footer class="document-footer"><span class="footer-brand">Quill</span><span>Codebase guide &middot; commit 3f9c2a1</span><span>29 September 2026</span></footer>
+    </main>
+  </div>
+</body>
+</html>
